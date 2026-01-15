@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/service/local_store.dart';
 import '../../data/service/network_caller.dart';
+import '../constants/colors.dart';
 
 class DeliveryAddressDialog extends StatefulWidget {
   const DeliveryAddressDialog({Key? key}) : super(key: key);
@@ -16,11 +15,11 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
-  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _streetController = TextEditingController();
   final TextEditingController _unitController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _postalController = TextEditingController();
+  final TextEditingController _instructionsController = TextEditingController();
 
   bool _isLoading = false;
   String? _customerId;
@@ -42,11 +41,11 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
   Future<void> _loadSavedAddress() async {
     final saved = await LocalStore.instance.getSavedAddress();
     if (saved != null) {
-      _nameController.text = saved['name'] ?? '';
       _streetController.text = saved['street'] ?? '';
       _unitController.text = saved['unit'] ?? '';
       _cityController.text = saved['city'] ?? '';
       _postalController.text = saved['postal'] ?? '';
+      _instructionsController.text = saved['instructions'] ?? '';
     }
   }
 
@@ -89,11 +88,11 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
 
     if (response.isSuccess && response.body?['Error'] == null) {
       await LocalStore.instance.saveAddress({
-        'name': _nameController.text.trim(),
         'street': _streetController.text.trim(),
         'unit': _unitController.text.trim(),
         'city': _cityController.text.trim(),
         'postal': _postalController.text.trim(),
+        'instructions': _instructionsController.text.trim(),
         'fullAddress': fullAddress,
       });
 
@@ -122,122 +121,278 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: const Text(
-        'Delivery Address',
-        style: TextStyle(fontWeight: FontWeight.bold),
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Update where we should pick up and deliver your laundry',
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 12),
-
-              // Full Name
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Full Name',
-                  hintText: 'John Doe',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                v == null || v.trim().isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 10),
-
-              // Street
-              TextFormField(
-                controller: _streetController,
-                decoration: const InputDecoration(
-                  labelText: 'Street Address',
-                  hintText: '123 Main Street',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                v == null || v.trim().isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 10),
-
-              // Unit / Apt
-              TextFormField(
-                controller: _unitController,
-                decoration: const InputDecoration(
-                  labelText: 'Unit / Apt (Optional)',
-                  hintText: 'Apt 4B',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // City + Postal
-              Row(
+      backgroundColor: Colors.white,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header with title, subtitle, and close button
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: TextFormField(
-                      controller: _cityController,
-                      decoration: const InputDecoration(
-                        labelText: 'City',
-                        hintText: 'Vancouver',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Required' : null,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Delivery Address',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.foreground,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Update where we should pick up and deliver your laundry.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    color: AppColors.mutedForeground,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+
+            // Form content
+            Flexible(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Street Address
+                        TextFormField(
+                          controller: _streetController,
+                          decoration: InputDecoration(
+                            labelText: 'Street Address',
+                            hintText: '123 Main Street',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Required' : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Unit / Apt (Optional)
+                        TextFormField(
+                          controller: _unitController,
+                          decoration: InputDecoration(
+                            labelText: 'Unit / Apt (Optional)',
+                            hintText: 'Apt 4B',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // City
+                        TextFormField(
+                          controller: _cityController,
+                          decoration: InputDecoration(
+                            labelText: 'City',
+                            hintText: 'Vancouver',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Required' : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Postal Code
+                        TextFormField(
+                          controller: _postalController,
+                          decoration: InputDecoration(
+                            labelText: 'Postal Code',
+                            hintText: 'V5N 4P5',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Required' : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Delivery Instructions (Optional)
+                        TextFormField(
+                          controller: _instructionsController,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            labelText: 'Delivery Instructions (Optional)',
+                            hintText: 'e.g., Leave at front door, ring doorbell',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Action buttons
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.border,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Cancel button
                   Expanded(
-                    child: TextFormField(
-                      controller: _postalController,
-                      decoration: const InputDecoration(
-                        labelText: 'Postal Code',
-                        hintText: 'V5N 4P5',
-                        border: OutlineInputBorder(),
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.foreground,
+                        side: BorderSide(
+                          color: AppColors.border,
+                          width: 1,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Required' : null,
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Save Address button
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _saveAddress,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary, // Teal
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.border,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Save Address',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-
-              // Buttons
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    child: const Text('Cancel'),
-                  ),
-                  const Spacer(),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _saveAddress,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
-                    )
-                        : const Text('Save Address'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -245,11 +400,11 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
 
   @override
   void dispose() {
-    _nameController.dispose();
     _streetController.dispose();
     _unitController.dispose();
     _cityController.dispose();
     _postalController.dispose();
+    _instructionsController.dispose();
     super.dispose();
   }
 }

@@ -8,6 +8,7 @@ class ProfileController extends GetxController {
   /// Reactive observables for UI binding
   final name = ''.obs;
   final email = ''.obs;
+  final phone = ''.obs;
 
   @override
   void onInit() {
@@ -22,9 +23,11 @@ class ProfileController extends GetxController {
       if (profile != null) {
         name.value = profile.fullName;
         email.value = profile.email;
+        phone.value = profile.phone;
       } else {
         name.value = '';
         email.value = '';
+        phone.value = '';
       }
     } catch (e) {
       debugPrint("⚠️ Error loading profile: $e");
@@ -32,13 +35,13 @@ class ProfileController extends GetxController {
   }
 
   /// ✅ Save updated info locally and refresh reactive values
-  Future<void> updateProfile(String newName, String newEmail) async {
+  Future<void> updateProfile(String newName, String newEmail, String newPhone) async {
     try {
       final existing = await LocalStore.instance.getUserProfile();
       final updated = UserProfile(
         fullName: newName,
         email: newEmail,
-        phone: existing?.phone ?? '',
+        phone: newPhone,
         address: existing?.address ?? '',
         name: newName,
       );
@@ -66,25 +69,33 @@ class ProfileController extends GetxController {
 
   /// ✅ Logout — clears all local data and resets app
   Future<void> logout() async {
-    final confirm = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('Confirm Logout'),
-        content: const Text('Are you sure you want to log out?'),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Cancel'),
+    final confirm = await showDialog<bool>(
+      context: Get.context!,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to log out?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
-          ElevatedButton(
-            onPressed: () => Get.back(result: true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirm != true) return;

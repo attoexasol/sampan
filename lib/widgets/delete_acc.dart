@@ -3,11 +3,29 @@ import 'package:get/get.dart';
 import '../../data/service/local_store.dart';
 import '../../data/service/network_caller.dart';
 import '../../routes/app_routes.dart';
+import '../../constants/colors.dart';
+import 'delete_account_feedback_dialog.dart';
 
 class DeleteAccountDialog {
   static Future<void> show(BuildContext context) async {
-    final confirm = await Get.dialog<bool>(
-      AlertDialog(
+    // Show feedback dialog first
+    final feedbackResult = await showDialog<dynamic>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const DeleteAccountFeedbackDialog(),
+    );
+
+    // If user clicked "Keep My Account", just return
+    if (feedbackResult == false || feedbackResult == null) {
+      return;
+    }
+
+    // If user clicked "Continue", proceed with deletion confirmation
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
         title: const Text('Delete Account'),
         content: const Text(
           'Are you sure you want to permanently delete your account? This action cannot be undone.',
@@ -15,16 +33,24 @@ class DeleteAccountDialog {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         actions: [
           TextButton(
-            onPressed: () => Get.back(result: false),
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary, // Teal color for Cancel button
+              ),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Get.back(result: true),
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete'),
           ),
         ],
-      ),
+        );
+      },
     );
 
     if (confirm != true) return;

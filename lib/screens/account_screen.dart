@@ -5,23 +5,20 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:sampan/constants/colors.dart';
 import 'package:sampan/constants/sizes.dart';
-import 'package:sampan/widgets/OrderHistoryCard.dart';
-import 'package:sampan/widgets/header_widget.dart';
-import 'package:sampan/widgets/helpsupport.dart';
-import 'package:sampan/widgets/invitefriends.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../controller/profile_controller.dart';
 import '../widgets/DeliveryAddressDialog.dart';
 import '../widgets/GiftCardDialog.dart';
 import '../widgets/delete_acc.dart';
 import '../widgets/faq_dialog.dart';
-import '../widgets/feature_card.dart';
 import '../widgets/invite_friends.dart';
 import '../widgets/payment_information.dart';
 import '../widgets/policy_dialog.dart';
 import '../widgets/preferences.dart';
-import '../widgets/user_profile_card.dart';
+import '../widgets/rate_experience_dialog.dart';
+import '../widgets/sustainability_promise_dialog.dart';
 import '../widgets/your_wallet.dart';
+import '../widgets/order_history_dialog.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({Key? key}) : super(key: key);
@@ -45,53 +42,106 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
+      body: Stack(
+        children: [
+          // Background pattern - Match React app-container
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.background, // bg-background
+                  image: const DecorationImage(
+                  image: AssetImage('assets/images/laundry-background-pattern.png'),
+                  repeat: ImageRepeat.repeat,
+                  fit: BoxFit.none,
+                  opacity: 0.06, // Match home_screen opacity
+                ),
+              ),
+            ),
+          ),
+          // Main content
+          SafeArea(
         bottom: false,
         child: SingleChildScrollView(
           child: Column(
             children: [
-              const HeaderWidget(),
+                  // Header - Match React: p-6, text-2xl, font-bold
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24), // p-6 = 24px
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                    ),
+                    child: Text(
+                      'Profile',
+                      style: TextStyle(
+                        fontSize: 24, // text-2xl = 24px
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryForeground,
+                      ),
+                    ),
+                  ),
+
+              // Main Content - Match React: p-4, space-y-4
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: const EdgeInsets.all(16), // p-4 = 16px
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // User Profile Card
+                    _buildProfileCard(),
 
-                    // 🔹 User Profile Card
+                    const SizedBox(height: 16), // space-y-4 = 16px
 
+                    // Your Environmental Impact Card
+                    _buildEnvironmentalImpactCard(),
 
-    EnvironmentalImpactCard(),
+                    const SizedBox(height: 16), // space-y-4 = 16px
 
-                    SizedBox(height: AppSizes.sm),
-                    Container(
-                        width: AppSizes.screenWidth*.95,
-                        child: OrderHistoryCard(onTap: (){})),
-                    SizedBox(height: AppSizes.sm),
+                    // Order History Card
+                    _buildOrderHistoryCard(),
+
+                    const SizedBox(height: 16), // space-y-4 = 16px
+
+                    // Feature Cards (2x2 Grid)
                     Row(
                       children: [
-                        FeatureCard(
+                        Expanded(
+                          child: _buildFeatureCard(
                           icon: Icons.phone_outlined,
                           label: 'Contact Store',
                           onTap: callStore,
                         ),
-                        FeatureCard(
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildFeatureCard(
                           icon: FontAwesomeIcons.whatsapp,
                           label: 'WhatsApp Us',
+                            iconColor: const Color(0xFF25D366), // WhatsApp green
                           onTap: openWhatsApp,
+                            isFontAwesome: true,
+                          ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        FeatureCard(
+                        Expanded(
+                          child: _buildFeatureCard(
                           icon: Icons.account_balance_wallet_outlined,
                           label: 'Your Wallet',
                           onTap: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const YourWalletWidget()),
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const YourWalletWidget()),
                             );
                           },
                         ),
-                        FeatureCard(
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildFeatureCard(
                           icon: Icons.card_giftcard,
                           label: 'Buy Gift Card',
                           onTap: () {
@@ -101,33 +151,41 @@ class _AccountScreenState extends State<AccountScreen> {
                             );
                           },
                         ),
-
+                        ),
                       ],
                     ),
 
-                    SizedBox(height: AppSizes.sm),
-                    SizedBox(
-                      width: AppSizes.screenWidth*.95,
-                        child: InviteFriendsCard(onTap: () => InviteFriendsWidget.showInviteDialog(context),)),
+                    const SizedBox(height: 16), // space-y-4 = 16px
 
+                    // Invite Friends Card
+                    _buildInviteFriendsCard(),
+
+                    const SizedBox(height: 16), // space-y-4 = 16px
+
+                    // Settings Section
                     _buildSectionTitle('Settings'),
                     _buildCard(
                       child: Column(
                         children: [
                           _buildMenuItem(
+                            icon: Icons.person_outline,
+                            label: 'Profile & Account',
+                            onTap: () {
+                              _showEditProfileDialog(context);
+                            },
+                          ),
+                          _buildDivider(),
+                          _buildMenuItem(
                             icon: Icons.credit_card_outlined,
                             label: 'Payment Methods',
                             onTap: () => Get.dialog(const PaymentMethodsDialog()),
                           ),
-
                           _buildDivider(),
-
                           _buildMenuItem(
                             icon: Icons.location_on_outlined,
                             label: 'Delivery Address',
                             onTap: () => Get.dialog(const DeliveryAddressDialog()),
                           ),
-
                           _buildDivider(),
                           _buildMenuItem(
                             icon: Icons.settings_outlined,
@@ -140,33 +198,30 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                     ),
 
-                    SizedBox(height: AppSizes.lg),
+                    const SizedBox(height: 16), // space-y-4 = 16px
 
-                    SizedBox(height: AppSizes.lg),
-
-                    _buildSectionTitle('Connect With Us'),
+                    // Help & Support Section
+                    _buildSectionTitle('Help & Support'),
                     _buildCard(
                       child: Column(
                         children: [
-                          _buildDivider(),
                           _buildMenuItem(
                             icon: Icons.help_outline,
                             label: 'FAQs',
                             onTap: () async {
-                              // Optional but helpful: keep UI clean before opening
                               ScaffoldMessenger.of(context).hideCurrentSnackBar();
                               FocusScope.of(context).unfocus();
-                              print("showFaqDialog called");
-                              await showFaqDialog(context);     // 👈 now shows reliably
+                              await showFaqDialog(context);
                             },
                           ),
+                          _buildDivider(),
                           _buildMenuItem(
                             icon: Icons.description_outlined,
-                            label: 'Policy of the Application',
+                            label: 'Terms & Privacy',
                             onTap: () async {
                               ScaffoldMessenger.of(context).hideCurrentSnackBar();
                               FocusScope.of(context).unfocus();
-                              await showPolicyDialog(context, effectiveDate: "October 30, 2025"); // optional
+                              await showPolicyDialog(context, effectiveDate: "October 30, 2025");
                             },
                           ),
                           _buildDivider(),
@@ -174,18 +229,22 @@ class _AccountScreenState extends State<AccountScreen> {
                             icon: Icons.star_outline,
                             label: 'Rate Our App',
                             onTap: () => openStoreRating(context),
-
                           ),
                         ],
                       ),
                     ),
 
-                    SizedBox(height: AppSizes.lg),
+                    const SizedBox(height: 16), // space-y-4 = 16px
 
+                    // Log Out & Delete Account
                     _buildCard(
                       child: Column(
                         children: [
-
+                          _buildMenuItem(
+                            icon: Icons.logout,
+                            label: 'Log Out',
+                            onTap: controller.logout,
+                          ),
                           _buildDivider(),
                           _buildMenuItem(
                             icon: Icons.delete_outline,
@@ -193,186 +252,717 @@ class _AccountScreenState extends State<AccountScreen> {
                             onTap: () => DeleteAccountDialog.show(context),
                             isDanger: true,
                           ),
-
-                          _buildDivider(),
-                          InkWell(
-                            onTap: controller.logout,
-                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                            child: Padding(
-                              padding: EdgeInsets.all(AppSizes.md),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.logout, size: AppSizes.iconMd),
-                                  SizedBox(width: AppSizes.sm),
-                                  Text(
-                                    'Log out',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: AppSizes.fontLg,
-                                      color: AppColors.foreground,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 16), // space-y-4 = 16px
+
+                    // Our Sustainability Promise Card
+                    _buildSustainabilityCard(),
 
                     SizedBox(height: AppSizes.xl * 2),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 🔹 Standard Card Wrapper
-  Widget _buildCard({required Widget child}) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: AppSizes.sm),
-      padding: EdgeInsets.all(AppSizes.lg),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      child: child,
     );
   }
 
-  // 🔹 Section Title
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.sm,
-        vertical: AppSizes.xs,
+  // 🔹 User Profile Card - Match React: p-6, h-16 w-16 avatar, gap-4, text-xl
+  Widget _buildProfileCard() {
+    return Container(
+      padding: const EdgeInsets.all(24), // p-6 = 24px
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(12), // rounded-lg = 0.75rem = 12px
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05), // shadow-sm
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: AppSizes.fontXl,
-          fontWeight: FontWeight.w600,
-          color: AppColors.foreground,
-        ),
-      ),
-    );
-  }
-
-  // 🔹 Clickable Card (Order History, Invite Friends)
-  Widget _buildClickableCard({
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return _buildCard(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-        child: Padding(
-          padding: EdgeInsets.all(AppSizes.lg),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: AppSizes.iconMd),
-              SizedBox(width: AppSizes.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
+                              child: Row(
+                                children: [
+          // Avatar - Match React: h-16 w-16 = 64px (radius 32)
+          CircleAvatar(
+            radius: 32, // h-16 w-16 = 64px diameter = 32px radius
+            backgroundColor: AppColors.primary,
+            child: Obx(() {
+              final initials = controller.name.value.isNotEmpty
+                  ? controller.name.value
+                      .split(' ')
+                      .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+                      .take(2)
+                      .join()
+                  : 'SM';
+              return Text(
+                initials,
+                style: TextStyle(
+                  color: AppColors.primaryForeground,
+                  fontSize: 20, // text-xl = 20px
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(width: 16), // gap-4 = 16px
+          // Name & Email
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Obx(() => Text(
+                      controller.name.value.isEmpty
+                          ? 'Sarath Mantravadi'
+                          : controller.name.value,
                       style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: AppSizes.fontLg,
-                        color: AppColors.foreground,
+                        fontSize: 20, // text-xl = 20px
+                        fontWeight: FontWeight.w600, // font-semibold
+                        color: AppColors.cardForeground,
                       ),
-                    ),
-                    SizedBox(height: AppSizes.xs),
-                    Text(
-                      subtitle,
+                    )),
+                const SizedBox(height: 4),
+                Obx(() => Text(
+                      controller.email.value.isEmpty
+                          ? 'sarathmantravadi@gmail.com'
+                          : controller.email.value,
                       style: TextStyle(
-                        fontSize: AppSizes.fontMd,
+                        fontSize: 14, // text-sm = 14px
                         color: AppColors.mutedForeground,
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: AppColors.mutedForeground),
-            ],
+                    )),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // 🔹 Menu Item Row
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool isDanger = false,
-  }) {
+  // 🔹 Order History Card - Match React: p-6, h-5 w-5 icons, gap-3
+  Widget _buildOrderHistoryCard() {
     return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.all(AppSizes.md),
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (context) => const OrderHistoryDialog(),
+        );
+      },
+      borderRadius: BorderRadius.circular(12), // rounded-lg
+      child: Container(
+        padding: const EdgeInsets.all(24), // p-6 = 24px
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12), // rounded-lg = 12px
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05), // shadow-sm
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLighter,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.inventory_2_outlined,
+                size: 20, // h-5 w-5 = 20px
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 12), // gap-3 = 12px
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                                  Text(
+                    'Your Order History',
+                                    style: TextStyle(
+                      fontSize: 16, // font-semibold base size
+                      fontWeight: FontWeight.w600, // font-semibold
+                      color: AppColors.cardForeground,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'View past orders and receipts',
+                    style: TextStyle(
+                      fontSize: 14, // text-sm = 14px
+                      color: AppColors.mutedForeground,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+            Icon(
+              Icons.chevron_right,
+              size: 20, // h-5 w-5 = 20px
+              color: AppColors.mutedForeground,
+                          ),
+                        ],
+                      ),
+                    ),
+    );
+  }
+
+  // 🔹 Invite Friends Card - Match React: p-6, h-5 w-5 icons, gap-3
+  Widget _buildInviteFriendsCard() {
+    return InkWell(
+      onTap: () => InviteFriendsWidget.showInviteDialog(context),
+      borderRadius: BorderRadius.circular(12), // rounded-lg
+      child: Container(
+        padding: const EdgeInsets.all(24), // p-6 = 24px
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12), // rounded-lg = 12px
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05), // shadow-sm
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
         child: Row(
           children: [
             Icon(
-              icon,
-              size: AppSizes.iconMd,
-              color: isDanger ? Colors.red : AppColors.foreground,
+              Icons.person_add_outlined,
+              size: 20, // h-5 w-5 = 20px
+              color: AppColors.primary,
             ),
-            SizedBox(width: AppSizes.md),
+            const SizedBox(width: 12), // gap-3 = 12px
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: AppSizes.fontLg,
-                  color: isDanger ? Colors.red : AppColors.foreground,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Invite Friends',
+                    style: TextStyle(
+                      fontSize: 16, // font-semibold base size
+                      fontWeight: FontWeight.w600, // font-semibold
+                      color: AppColors.cardForeground,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Share and earn rewards together',
+                    style: TextStyle(
+                      fontSize: 14, // text-sm = 14px
+                      color: AppColors.mutedForeground,
                 ),
               ),
+            ],
+          ),
             ),
-            Icon(Icons.chevron_right, color: AppColors.mutedForeground),
+            Icon(
+              Icons.chevron_right,
+              size: 20, // h-5 w-5 = 20px
+              color: AppColors.mutedForeground,
+            ),
           ],
         ),
       ),
     );
   }
 
-  // 🔹 Divider with consistent padding
+  // 🔹 Standard Card Wrapper - Match React: rounded-lg, shadow-sm, border
+  Widget _buildCard({required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8), // space-y-2 = 8px
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(12), // rounded-lg = 0.75rem = 12px
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05), // shadow-sm
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12), // overflow-hidden
+      child: child,
+      ),
+    );
+  }
+
+  // 🔹 Section Title - Match React: text-lg, font-semibold, px-2
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8, // px-2 = 8px
+        vertical: 8, // space-y-2 = 8px
+      ),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 18, // text-lg = 18px
+          fontWeight: FontWeight.w600, // font-semibold
+          color: AppColors.foreground,
+        ),
+      ),
+    );
+  }
+
+  // 🔹 Menu Item Row - Match React: p-4, h-5 w-5 icons, gap-3, font-medium
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isDanger = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16), // p-4 = 16px
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20, // h-5 w-5 = 20px
+                color: isDanger ? AppColors.destructive : AppColors.foreground,
+              ),
+              const SizedBox(width: 12), // gap-3 = 12px
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500, // font-medium
+                    fontSize: 16, // base font size
+                    color: isDanger ? AppColors.destructive : AppColors.foreground,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                size: 20, // h-5 w-5 = 20px
+                color: AppColors.mutedForeground,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🔹 Divider - Match React: mx-4 separator
   Widget _buildDivider() {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.md),
+      padding: const EdgeInsets.symmetric(horizontal: 16), // mx-4 = 16px
       child: Divider(
         height: 1,
+        thickness: 1,
         color: AppColors.border,
       ),
     );
   }
 
+  // 🔹 Our Sustainability Promise Card
+  Widget _buildSustainabilityCard() {
+    return InkWell(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (context) => const SustainabilityPromiseDialog(),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.primary.withOpacity(0.3), // Light green border
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+            // Header with globe icon and title
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primaryLighter,
+                  ),
+                  child: const Icon(
+                    Icons.public,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Our Sustainability Promise',
+                      style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                        color: AppColors.foreground,
+                      ),
+                    ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Subtitle with water drop icon
+            Row(
+              children: [
+                Icon(
+                  Icons.water_drop,
+                  color: Colors.blue,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'What It Means in Everyday Terms',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.foreground,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Bullet points
+            _buildSustainabilityBulletPoint('Each wash saves enough water for a 10-minute shower.'),
+            const SizedBox(height: 8),
+            _buildSustainabilityBulletPoint('The energy saved could charge your phone 100 times or light a bulb all night.'),
+            const SizedBox(height: 8),
+            _buildSustainabilityBulletPoint('Across our community, we\'ve kept thousands of liters of soap out of local streams.'),
+            const SizedBox(height: 16),
+
+            // Call to action
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Learn more about our impact',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSustainabilityBulletPoint(String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+                    Text(
+          '• ',
+                      style: TextStyle(
+            fontSize: 14,
+            color: AppColors.foreground,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.foreground,
+            ),
+                      ),
+                    ),
+                  ],
+    );
+  }
+
+  // 🔹 Your Environmental Impact Card
+  Widget _buildEnvironmentalImpactCard() {
+    return Container(
+      padding: const EdgeInsets.all(24), // p-6 = 24px
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(12), // rounded-lg = 12px
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05), // shadow-sm
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          Text(
+            'Your Environmental Impact',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.foreground,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Initial call to action
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primaryLighter,
+                ),
+                child: const Icon(
+                  Icons.public,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Place your first order and we\'ll show your impact!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Divider
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: AppColors.border,
+          ),
+          const SizedBox(height: 16),
+
+          // Impact metrics header
+          Center(
+            child: Text(
+              'EVERY ORDER (MIN. 20 LBS) SAVES',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.foreground,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Impact metrics
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // Water saving
+              _buildImpactMetric(
+                icon: Icons.water_drop,
+                iconColor: Colors.blue,
+                text: '2 showers',
+              ),
+              // Detergent saving
+              _buildImpactMetric(
+                icon: Icons.cleaning_services,
+                iconColor: const Color(0xFFEC4899), // Pink
+                text: '1 soap bottle',
+              ),
+              // Emissions saving
+              _buildImpactMetric(
+                icon: Icons.directions_car,
+                iconColor: Colors.red,
+                text: '10 km drive',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImpactMetric({
+    required IconData icon,
+    required Color iconColor,
+    required String text,
+  }) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: iconColor,
+          size: 32,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.foreground,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  // 🔹 Feature Card - Square-ish card for Contact Store, WhatsApp, Wallet, Gift Card
+  Widget _buildFeatureCard({
+    required dynamic icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? iconColor,
+    bool isFontAwesome = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(12), // rounded-lg
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05), // shadow-sm
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: InkWell(
+      onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+      child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+              isFontAwesome
+                  ? FaIcon(
+              icon,
+                      color: iconColor ?? AppColors.primary,
+                      size: 32, // Larger icon for feature cards
+                    )
+                  : Icon(
+                      icon,
+                      color: iconColor ?? AppColors.primary,
+                      size: 32, // Larger icon for feature cards
+            ),
+              const SizedBox(height: 12),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.foreground,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🔹 Edit Profile Dialog
+  void _showEditProfileDialog(BuildContext context) {
+    final nameCtrl = TextEditingController(text: controller.name.value);
+    final emailCtrl = TextEditingController(text: controller.email.value);
+    final phoneCtrl = TextEditingController(text: controller.phone.value);
+
+    showDialog(
+      context: context,
+      builder: (context) => _ProfileEditDialog(
+        nameController: nameCtrl,
+        emailController: emailCtrl,
+        phoneController: phoneCtrl,
+        onSave: (name, email, phone) async {
+          await controller.updateProfile(name, email, phone);
+          if (context.mounted) {
+            Navigator.pop(context);
+          }
+        },
+      ),
+    );
+  }
+
   Future<void> openStoreRating(BuildContext context) async {
+    // Show Rate Your Experience dialog
+    final rating = await showDialog<int>(
+      context: context,
+      builder: (context) => const RateExperienceDialog(),
+    );
+
+    // If user submitted a rating, proceed to store rating
+    if (rating != null && rating > 0) {
     if ((Platform.isAndroid && !AccountScreen.kPublishedAndroid) ||
         (Platform.isIOS && !AccountScreen.kPublishedIOS)) {
-      _showNotPublishedDialog(context);
+        // Show thank you message if not published
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Thank you for your $rating-star rating!'),
+            backgroundColor: AppColors.primary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       return;
     }
 
+      // Open store rating if published
     if (Platform.isAndroid) {
       final marketUri = Uri.parse('market://details?id=${AccountScreen.kAndroidPackageId}');
       final webUri   = Uri.parse('https://play.google.com/store/apps/details?id=${AccountScreen.kAndroidPackageId}');
@@ -390,38 +980,318 @@ class _AccountScreenState extends State<AccountScreen> {
       }
     }
   }
+  }
 
+  void openWhatsApp() async {
+    final phone = "+12503044766";
+    final message = Uri.encodeComponent("Hello! I want to contact you.");
+    final whatsappUrl = Uri.parse("https://wa.me/$phone?text=$message");
 
-  void _showNotPublishedDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('Ratings not available yet'),
-        content: const Text(
-            "We haven’t launched on the store yet. "
-                "You’ll be able to rate us once we’re live.\n\n"
-                "Meanwhile, you can send feedback directly—this really helps!"
-        ),
-        actions: [
-          TextButton(
+    if (!await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication)) {
+      throw 'Could not launch $whatsappUrl';
+    }
+  }
+
+  Future<void> callStore() async {
+    final phoneNumber = "tel:+12503044766";
+    final uri = Uri.parse(phoneNumber);
+    if (!await launchUrl(uri)) {
+      throw "Could not launch $phoneNumber";
+    }
+  }
+}
+
+class _ProfileEditDialog extends StatefulWidget {
+  final TextEditingController nameController;
+  final TextEditingController emailController;
+  final TextEditingController phoneController;
+  final Future<void> Function(String, String, String) onSave;
+
+  const _ProfileEditDialog({
+    required this.nameController,
+    required this.emailController,
+    required this.phoneController,
+    required this.onSave,
+  });
+
+  @override
+  State<_ProfileEditDialog> createState() => _ProfileEditDialogState();
+}
+
+class _ProfileEditDialogState extends State<_ProfileEditDialog> {
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      backgroundColor: Colors.white,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header with title, subtitle, and close button
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Profile & Account',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.foreground,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Update your personal information and account details',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    color: AppColors.mutedForeground,
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+                  ),
+                ],
+              ),
+            ),
+
+            // Form content
+            Flexible(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Full Name
+                      TextFormField(
+                        controller: widget.nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Full Name',
+                          hintText: 'Sarath Mantravadi',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: AppColors.border),
           ),
-          TextButton(
-            onPressed: () async {
-              final mail = Uri.parse(
-                'mailto:support@yourcompany.com?subject=App%20Feedback&body=Hi%20team,%20here%20is%20my%20feedback...',
-              );
-              await launchUrl(mail);
-              // ignore: use_build_context_synchronously
-              Navigator.pop(context);
-            },
-            child: const Text('Send Feedback'),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Email Address
+                      TextFormField(
+                        controller: widget.emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: 'Email Address',
+                          hintText: 'sarathmantravadi@gmail.com',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Phone Number
+                      TextFormField(
+                        controller: widget.phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: 'Phone Number',
+                          hintText: '+1 (555) 123-4567',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Action buttons
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.border,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Cancel button
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.foreground,
+                        side: BorderSide(
+                          color: AppColors.border,
+                          width: 1,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Save Changes button
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () async {
+                              setState(() => _isLoading = true);
+                              await widget.onSave(
+                                widget.nameController.text.trim(),
+                                widget.emailController.text.trim(),
+                                widget.phoneController.text.trim(),
+                              );
+                              setState(() => _isLoading = false);
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary, // Teal
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.border,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Save Changes',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                    ),
           ),
         ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> openStoreRating(BuildContext context) async {
+    // Show Rate Your Experience dialog
+    final rating = await showDialog<int>(
+      context: context,
+      builder: (context) => const RateExperienceDialog(),
+    );
+
+    // If user submitted a rating, proceed to store rating
+    if (rating != null && rating > 0) {
+      if ((Platform.isAndroid && !AccountScreen.kPublishedAndroid) ||
+          (Platform.isIOS && !AccountScreen.kPublishedIOS)) {
+        // Show thank you message if not published
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Thank you for your $rating-star rating!'),
+            backgroundColor: AppColors.primary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
+      // Open store rating if published
+      if (Platform.isAndroid) {
+        final marketUri = Uri.parse('market://details?id=${AccountScreen.kAndroidPackageId}');
+        final webUri   = Uri.parse('https://play.google.com/store/apps/details?id=${AccountScreen.kAndroidPackageId}');
+        final ok = await launchUrl(marketUri, mode: LaunchMode.externalApplication);
+        if (!ok) await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+
+      if (Platform.isIOS) {
+        final iosUri = Uri.parse('itms-apps://itunes.apple.com/app/id${AccountScreen.kAppleAppId}?action=write-review');
+        final ok = await launchUrl(iosUri, mode: LaunchMode.externalApplication);
+        if (!ok) {
+          final httpsUri = Uri.parse('https://apps.apple.com/app/id${AccountScreen.kAppleAppId}?action=write-review');
+          await launchUrl(httpsUri, mode: LaunchMode.externalApplication);
+        }
+      }
+    }
   }
 
   void openWhatsApp() async {

@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/service/local_store.dart';
 import '../../data/service/network_caller.dart';
+import '../../constants/colors.dart';
 
 class PaymentMethodsDialog extends StatefulWidget {
   const PaymentMethodsDialog({Key? key}) : super(key: key);
@@ -307,9 +307,24 @@ class _PaymentMethodsDialogState extends State<PaymentMethodsDialog> {
       content: SingleChildScrollView(child: _buildBody()),
       actions: [
         if (!_addingNew)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.mutedForeground,
+                ),
+                child: const Text('Close'),
+              ),
           TextButton(
-            onPressed: () => Get.back(),
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                ),
             child: const Text('Done'),
+              ),
+            ],
           ),
       ],
     );
