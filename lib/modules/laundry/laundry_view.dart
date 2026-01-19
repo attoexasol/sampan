@@ -44,69 +44,75 @@ class LaundryView extends StatelessWidget {
             ),
           ),
           SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const HeaderWidget(),
-                  Padding(
-                    padding: EdgeInsets.all(AppSizes.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 1. Laundry How It Works
-                        const HowItWorksCard(),
-                        SizedBox(height: AppSizes.md),
-
-                        // 2. Premium Bag Service
-                        const PremiumBagCard(),
-                        SizedBox(height: AppSizes.md),
-
-                        // 3. Subscriptions
-                        const SubscriptionCard(),
-                        SizedBox(height: AppSizes.md),
-
-                        // 4. Pay As You Go
-                        const PayAsYouGoCard(),
-                        SizedBox(height: AppSizes.md),
-
-                        // 5. Bulky Items (API-driven)
-                        const BulkyItemsSection(),
-                        SizedBox(height: AppSizes.md),
-
-                        // 6. Express Service (Want It Sooner)
-                        const ExpressServiceCard(),
-                        SizedBox(height: AppSizes.md),
-
-                        // 7. Special Instructions
-                        Obx(() => SpecialInstructionsCard(
-                          controller: controller.specialInstructionsController,
-                          saveForFuture: controller.saveForFutureOrders.value,
-                          onSaveForFutureChanged: (value) {
-                            controller.saveForFutureOrders.value = value;
-                          },
-                        )),
-                        SizedBox(height: AppSizes.md),
-
-                        // 8. Order Summary
-                        const OrderSummarySection(),
-                        SizedBox(height: AppSizes.lg),
-
-                        // Action Buttons
-                        _buildActionButtons(controller),
-                        SizedBox(height: AppSizes.lg),
-
-                        // 9. How We Care For Your Clothes
-                        const HowWeCareCard(),
-                        SizedBox(height: AppSizes.md),
-
-                        // 10. More About Our Services
-                        const MoreAboutServicesCard(),
-                        SizedBox(height: AppSizes.xl),
-                      ],
-                    ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final screenWidth = MediaQuery.of(context).size.width;
+                return SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Stack(
+                        children: [
+                          Column(
+                            children: List.generate(
+                              50,
+                              (index) => Image.asset(
+                                'assets/images/placeholder.png',
+                                width: screenWidth,
+                                fit: BoxFit.fitWidth,
+                              ),
+                            ),
+                          ),
+                          Column(
+                            children: [
+                              const HeaderWidget(),
+                              Padding(
+                                padding: EdgeInsets.all(AppSizes.md),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const HowItWorksCard(),
+                                    SizedBox(height: AppSizes.md),
+                                    const PremiumBagCard(),
+                                    SizedBox(height: AppSizes.md),
+                                    const SubscriptionCard(),
+                                    SizedBox(height: AppSizes.md),
+                                    const PayAsYouGoCard(),
+                                    SizedBox(height: AppSizes.md),
+                                    const BulkyItemsSection(),
+                                    SizedBox(height: AppSizes.md),
+                                    const ExpressServiceCard(),
+                                    SizedBox(height: AppSizes.md),
+                                    Obx(() => SpecialInstructionsCard(
+                                      controller: controller.specialInstructionsController,
+                                      saveForFuture: controller.saveForFutureOrders.value,
+                                      onSaveForFutureChanged: (value) {
+                                        controller.saveForFutureOrders.value = value;
+                                      },
+                                    )),
+                                    SizedBox(height: AppSizes.md),
+                                    const OrderSummarySection(),
+                                    SizedBox(height: AppSizes.lg),
+                                    _buildActionButtons(controller),
+                                    SizedBox(height: AppSizes.lg),
+                                    const HowWeCareCard(),
+                                    SizedBox(height: AppSizes.md),
+                                    const MoreAboutServicesCard(),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Image.asset(
+                        'assets/images/placeholder.png',
+                        width: screenWidth,
+                        fit: BoxFit.fitWidth,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
