@@ -27,10 +27,11 @@ class LaundryController extends GetxController {
   // Special instructions
   final specialInstructions = ''.obs;
   final specialInstructionsController = TextEditingController();
+  final saveForFutureOrders = false.obs;
 
   // Service prices (static - should come from config/API in future)
   static const double premiumBagPrice = 20.0;
-  static const double subscriptionPrice = 69.0;
+  static const double subscriptionPrice = 18.0;
   static const double payAsYouGoPrice = 2.25; // per pound
   static const double payAsYouGoMinCharge = 45.0;
   static const double expressServicePrice = 5.0;
@@ -54,6 +55,16 @@ class LaundryController extends GetxController {
   Future<void> loadBulkyItems() async {
     isLoadingBulkyItems.value = true;
     try {
+      // Wait for products to load if they're still loading
+      if (productsCtrl.isLoading.value) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      // If products are still empty, try to refresh
+      if (productsCtrl.products.isEmpty) {
+        await productsCtrl.loadProducts();
+      }
+      
       // Filter products for laundry category - these include bulky items
       final allProducts = productsCtrl.products;
       

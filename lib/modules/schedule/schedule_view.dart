@@ -43,35 +43,35 @@ class ScheduleView extends GetView<ScheduleController> {
             ),
           ),
           SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const HeaderWidget(),
-                  Padding(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const HeaderWidget(),
+              Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: AppSizes.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: AppSizes.lg),
 
-                        // Title
-                        Text(
-                          'Schedule Your Service',
+                    // Title
+                    Text(
+                      'Schedule Your Service',
                           style: TextStyle(
                             fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.foreground,
-                          ),
-                        ),
-                        SizedBox(height: AppSizes.sm),
-                        Text(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.foreground,
+                      ),
+                    ),
+                    SizedBox(height: AppSizes.sm),
+                    Text(
                           'Choose your pickup and delivery times, enter your address, and create an account to complete your booking.',
-                          style: TextStyle(
+                      style: TextStyle(
                             fontSize: 14,
-                            color: AppColors.mutedForeground,
+                        color: AppColors.mutedForeground,
                             height: 1.5,
-                          ),
-                        ),
+                      ),
+                    ),
                     SizedBox(height: AppSizes.lg),
 
                     // Service Type Display (if available)
@@ -103,11 +103,11 @@ class ScheduleView extends GetView<ScheduleController> {
                     }),
                     SizedBox(height: AppSizes.md),
 
-                        // Schedule Card
-                        _buildScheduleCard(context),
-                        SizedBox(height: AppSizes.xl),
+                    // Schedule Card
+                    _buildScheduleCard(context),
+                    SizedBox(height: AppSizes.xl),
 
-                        // Account Card
+                    // Account Card
                         _buildAccountCard(
                           onLogin: () {
                             Get.to(() => const LoginView(),
@@ -117,34 +117,34 @@ class ScheduleView extends GetView<ScheduleController> {
                             Get.put(SignupController());
                             Get.to(() => const SignupView());
                           },
-                        ),
-                        SizedBox(height: AppSizes.xl),
+                    ),
+                    SizedBox(height: AppSizes.xl),
 
-                        // Order Summary Section
+                    // Order Summary Section
                         Text(
-                          'Your Order Summary',
-                          style: TextStyle(
+                        'Your Order Summary',
+                        style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: AppColors.foreground,
-                          ),
-                        ),
-                        SizedBox(height: AppSizes.lg),
+                      ),
+                    ),
+                    SizedBox(height: AppSizes.lg),
 
                         // ✅ UPDATED: Now shows pickup/delivery dates in OrderSummaryCard
                         _buildOrderSummarySection(),
 
-                        SizedBox(height: AppSizes.xl),
+                    SizedBox(height: AppSizes.xl),
 
-                        // Confirm Schedule Button
-                        _buildSubmitButton(context),
-                        SizedBox(height: AppSizes.xl),
-                      ],
-                    ),
-                  ),
-                ],
+                    // Confirm Schedule Button
+                    _buildSubmitButton(context),
+                    SizedBox(height: AppSizes.xl),
+                  ],
+                ),
               ),
-            ),
+            ],
+          ),
+        ),
           ),
         ],
       ),
@@ -226,34 +226,34 @@ class ScheduleView extends GetView<ScheduleController> {
 
               // Pickup Time Slots
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Pickup Time Slot *',
-                    style: TextStyle(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pickup Time Slot *',
+                      style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w500),
-                  ),
+                          fontWeight: FontWeight.w500),
+                    ),
                   const SizedBox(height: 12),
-                  ...controller.timeSlots.map(
-                        (slot) => Obx(() => RadioListTile<String>(
-                      title: Text(
-                        slot,
+                    ...controller.timeSlots.map(
+                          (slot) => Obx(() => RadioListTile<String>(
+                        title: Text(
+                          slot,
                         style: TextStyle(fontSize: 14),
-                      ),
-                      value: slot,
-                      groupValue: controller.selectedPickupTimeSlot.value,
-                      onChanged: (v) {
-                        controller.selectedPickupTimeSlot.value = v ?? '';
-                      },
-                      contentPadding: EdgeInsets.zero,
+                        ),
+                        value: slot,
+                        groupValue: controller.selectedPickupTimeSlot.value,
+                        onChanged: (v) {
+                          controller.selectedPickupTimeSlot.value = v ?? '';
+                        },
+                        contentPadding: EdgeInsets.zero,
                       dense: true,
                       visualDensity: VisualDensity.compact,
                       activeColor: AppColors.primary,
                       selectedTileColor: Colors.transparent,
-                    )),
-                  ),
-                ],
+                      )),
+                    ),
+                  ],
               ),
               const SizedBox(height: 20),
 
@@ -298,55 +298,55 @@ class ScheduleView extends GetView<ScheduleController> {
 
               // Delivery Time Slots
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Delivery Time Slot *',
-                    style: TextStyle(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Delivery Time Slot *',
+                      style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w500),
-                  ),
+                          fontWeight: FontWeight.w500),
+                    ),
                   const SizedBox(height: 12),
-                  ...controller.timeSlots.map(
-                        (slot) => Obx(() {
-                      final isAvailable =
-                      controller.isDeliveryTimeSlotAvailable(slot);
-                      return RadioListTile<String>(
-                        title: Text(
-                          slot,
-                          style: TextStyle(
+                    ...controller.timeSlots.map(
+                          (slot) => Obx(() {
+                        final isAvailable =
+                        controller.isDeliveryTimeSlotAvailable(slot);
+                        return RadioListTile<String>(
+                          title: Text(
+                            slot,
+                            style: TextStyle(
                             fontSize: 14,
-                            color: isAvailable ? Colors.black : Colors.grey,
+                              color: isAvailable ? Colors.black : Colors.grey,
+                            ),
                           ),
-                        ),
-                        value: slot,
-                        groupValue:
-                        controller.selectedDeliveryTimeSlot.value,
-                        onChanged: isAvailable
-                            ? (v) {
-                          controller.selectedDeliveryTimeSlot.value =
-                              v ?? '';
-                        }
-                            : null,
-                        contentPadding: EdgeInsets.zero,
+                          value: slot,
+                          groupValue:
+                          controller.selectedDeliveryTimeSlot.value,
+                          onChanged: isAvailable
+                              ? (v) {
+                            controller.selectedDeliveryTimeSlot.value =
+                                v ?? '';
+                          }
+                              : null,
+                          contentPadding: EdgeInsets.zero,
                         dense: true,
                         visualDensity: VisualDensity.compact,
                         activeColor: AppColors.primary,
                         selectedTileColor: Colors.transparent,
-                      );
-                    }),
-                  ),
-                ],
+                        );
+                      }),
+                    ),
+                  ],
               ),
               const SizedBox(height: 16),
 
               // Turnaround Note
               Text(
                 'Note: You can schedule up to 2 weeks in advance. Turnaround times vary by service type.',
-                style: TextStyle(
+                      style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.mutedForeground,
-                ),
+                        color: AppColors.mutedForeground,
+                      ),
               ),
             ],
           ),
@@ -374,81 +374,81 @@ class ScheduleView extends GetView<ScheduleController> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
                 Icon(Icons.person_outline,
                     color: AppColors.primary, size: 24),
                 const SizedBox(width: 12),
-                Text(
-                  'Account',
-                  style: TextStyle(
+              Text(
+                'Account',
+                style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: AppColors.foreground,
-                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Create an account or login to save your preferences and track your orders.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.mutedForeground,
-                height: 1.5,
               ),
+            ],
+          ),
+            const SizedBox(height: 12),
+          Text(
+            'Create an account or login to save your preferences and track your orders.',
+            style: TextStyle(
+                fontSize: 14,
+              color: AppColors.mutedForeground,
+                height: 1.5,
             ),
+          ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onLogin,
-                    style: OutlinedButton.styleFrom(
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onLogin,
+                  style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       side: BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(
+                    shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                      ),
                     ),
-                    child: Text(
-                      'Login',
-                      style: TextStyle(
+                  ),
+                  child: Text(
+                    'Login',
+                    style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                         color: AppColors.foreground,
-                      ),
                     ),
                   ),
                 ),
+              ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onCreateAccount,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onCreateAccount,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
+                    shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
                     ),
-                    child: Text(
-                      'Create Account',
-                      style: TextStyle(
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Create Account',
+                    style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                      ),
+                      color: Colors.white,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
+        ],
         ),
       ),
     );
@@ -544,29 +544,29 @@ class ScheduleView extends GetView<ScheduleController> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
             Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
-            Text(
-              'No items selected yet',
-              style: TextStyle(
+          Text(
+            'No items selected yet',
+            style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w600,
                 color: AppColors.mutedForeground,
-              ),
             ),
+          ),
             const SizedBox(height: 8),
-            Text(
-              'Start booking to see your order summary',
-              textAlign: TextAlign.center,
-              style: TextStyle(
+          Text(
+            'Start booking to see your order summary',
+            textAlign: TextAlign.center,
+            style: TextStyle(
                 fontSize: 14,
                 color: AppColors.mutedForeground,
-              ),
             ),
-          ],
+          ),
+        ],
         ),
       ),
     );

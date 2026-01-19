@@ -11,10 +11,11 @@ import '../controller/order_summary_controller.dart';
 import '../data/service/products_service.dart';
 import '../modules/schedule/schedule_controller.dart';
 import '../modules/schedule/schedule_view.dart';
-import '../widgets/laundry_how_it_works.dart';
 import '../widgets/service_card.dart';
 import '../widgets/specialty_service_card.dart';
 import 'service_products_screen.dart';
+import '../bindings/laundry_binding.dart';
+import '../modules/laundry/laundry_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -213,9 +214,10 @@ class _BookScreenState extends State<BookScreen> {
                             subtitle: "\$2.25/lb or \$69/bag",
                            // subtitle: 'Wash & Fold, Bulky Items',
                             isSelected: false,
-                            onTap: () => Get.to(() => ServiceProductsScreen(
-                              category: ProductCategory.laundry,
-                            )),
+                            onTap: () => Get.to(
+                              () => const LaundryView(),
+                              binding: LaundryBinding(),
+                            ),
                           ),
                         ),
                         SizedBox(width: AppSizes.md),
