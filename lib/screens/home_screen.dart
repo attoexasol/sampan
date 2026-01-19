@@ -210,7 +210,8 @@ class _BookScreenState extends State<BookScreen> {
                           child: ServiceCard(
                             icon: LucideIcons.shirt,
                             title: 'Laundry',
-                            subtitle: 'Wash & Fold, Bulky Items',
+                            subtitle: "\$2.25/lb or \$69/bag",
+                           // subtitle: 'Wash & Fold, Bulky Items',
                             isSelected: false,
                             onTap: () => Get.to(() => ServiceProductsScreen(
                               category: ProductCategory.laundry,
