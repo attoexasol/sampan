@@ -1,4 +1,3 @@
-// lib/modules/laundry/laundry_view.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../constants/colors.dart';
@@ -24,98 +23,73 @@ class LaundryView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<LaundryController>();
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // Background pattern
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: AppColors.background,
-                image: DecorationImage(
-                  image: AssetImage('assets/images/laundry-background-pattern.png'),
-                  repeat: ImageRepeat.repeat,
-                  fit: BoxFit.none,
-                  opacity: 0.06,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/placeholder.png'),
+                    repeat: ImageRepeat.repeat,
+                    fit: BoxFit.fitWidth,
+                    alignment: Alignment.topCenter,
+                  ),
                 ),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final screenWidth = MediaQuery.of(context).size.width;
-                return SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      Stack(
+                child: Column(
+                  children: [
+                    const HeaderWidget(),
+                    Padding(
+                      padding: EdgeInsets.all(AppSizes.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Column(
-                            children: List.generate(
-                              50,
-                              (index) => Image.asset(
-                                'assets/images/placeholder.png',
-                                width: screenWidth,
-                                fit: BoxFit.fitWidth,
-                              ),
-                            ),
-                          ),
-                          Column(
-                            children: [
-                              const HeaderWidget(),
-                              Padding(
-                                padding: EdgeInsets.all(AppSizes.md),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const HowItWorksCard(),
-                                    SizedBox(height: AppSizes.md),
-                                    const PremiumBagCard(),
-                                    SizedBox(height: AppSizes.md),
-                                    const SubscriptionCard(),
-                                    SizedBox(height: AppSizes.md),
-                                    const PayAsYouGoCard(),
-                                    SizedBox(height: AppSizes.md),
-                                    const BulkyItemsSection(),
-                                    SizedBox(height: AppSizes.md),
-                                    const ExpressServiceCard(),
-                                    SizedBox(height: AppSizes.md),
-                                    Obx(() => SpecialInstructionsCard(
-                                      controller: controller.specialInstructionsController,
-                                      saveForFuture: controller.saveForFutureOrders.value,
-                                      onSaveForFutureChanged: (value) {
-                                        controller.saveForFutureOrders.value = value;
-                                      },
-                                    )),
-                                    SizedBox(height: AppSizes.md),
-                                    const OrderSummarySection(),
-                                    SizedBox(height: AppSizes.lg),
-                                    _buildActionButtons(controller),
-                                    SizedBox(height: AppSizes.lg),
-                                    const HowWeCareCard(),
-                                    SizedBox(height: AppSizes.md),
-                                    const MoreAboutServicesCard(),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                          const HowItWorksCard(),
+                          SizedBox(height: AppSizes.md),
+                          const PremiumBagCard(),
+                          SizedBox(height: AppSizes.md),
+                          const SubscriptionCard(),
+                          SizedBox(height: AppSizes.md),
+                          const PayAsYouGoCard(),
+                          SizedBox(height: AppSizes.md),
+                          const BulkyItemsSection(),
+                          SizedBox(height: AppSizes.md),
+                          const ExpressServiceCard(),
+                          SizedBox(height: AppSizes.md),
+                          Obx(() => SpecialInstructionsCard(
+                            controller: controller.specialInstructionsController,
+                            saveForFuture: controller.saveForFutureOrders.value,
+                            onSaveForFutureChanged: (value) {
+                              controller.saveForFutureOrders.value = value;
+                            },
+                          )),
+                          SizedBox(height: AppSizes.md),
+                          const OrderSummarySection(),
+                          SizedBox(height: AppSizes.lg),
+                          _buildActionButtons(controller),
+                          SizedBox(height: AppSizes.lg),
+                          const HowWeCareCard(),
+                          SizedBox(height: AppSizes.md),
+                          const MoreAboutServicesCard(),
                         ],
                       ),
-                      Image.asset(
-                        'assets/images/placeholder.png',
-                        width: screenWidth,
-                        fit: BoxFit.fitWidth,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    ),
+                  ],
+                ),
+              ),
+              Image.asset(
+                'assets/images/placeholder.png',
+                width: screenWidth,
+                fit: BoxFit.fitWidth,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -123,7 +97,6 @@ class LaundryView extends StatelessWidget {
   Widget _buildActionButtons(LaundryController controller) {
     return Column(
       children: [
-        // Back Button
         OutlinedButton(
           onPressed: () => Get.back(),
           style: OutlinedButton.styleFrom(
@@ -141,8 +114,6 @@ class LaundryView extends StatelessWidget {
           ),
         ),
         SizedBox(height: AppSizes.sm),
-
-        // Continue Button
         Obx(() => ElevatedButton(
           onPressed: controller.hasAnySelection
               ? () {

@@ -23,64 +23,67 @@ class DryCleaningView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<DryCleaningController>();
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: AppColors.background,
-                image: DecorationImage(
-                  image: AssetImage('assets/images/laundry-background-pattern.png'),
-                  repeat: ImageRepeat.repeat,
-                  fit: BoxFit.none,
-                  opacity: 0.06,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/placeholder.png'),
+                    repeat: ImageRepeat.repeat,
+                    fit: BoxFit.fitWidth,
+                    alignment: Alignment.topCenter,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const HeaderWidget(),
+                    Padding(
+                      padding: EdgeInsets.all(AppSizes.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const DryCleaningHowItWorksCard(),
+                          SizedBox(height: AppSizes.md),
+                          const DryCleaningServicesSection(),
+                          SizedBox(height: AppSizes.md),
+                          const RushServiceCard(),
+                          SizedBox(height: AppSizes.md),
+                          const EstimatorCard(),
+                          SizedBox(height: AppSizes.md),
+                          const DryCleaningSpecialInstructionsCard(),
+                          SizedBox(height: AppSizes.md),
+                          const DryCleaningOrderSummaryCard(),
+                          SizedBox(height: AppSizes.lg),
+                          _buildActionButtons(controller),
+                          SizedBox(height: AppSizes.lg),
+                          const ScheduleDeliveryCard(),
+                          SizedBox(height: AppSizes.md),
+                          const PricingInfoCard(),
+                          SizedBox(height: AppSizes.md),
+                          const UpchargeMenuCard(),
+                          SizedBox(height: AppSizes.md),
+                          const DisclaimersCard(),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const HeaderWidget(),
-                  Padding(
-                    padding: EdgeInsets.all(AppSizes.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const DryCleaningHowItWorksCard(),
-                        SizedBox(height: AppSizes.md),
-                        const DryCleaningServicesSection(),
-                        SizedBox(height: AppSizes.md),
-                        const RushServiceCard(),
-                        SizedBox(height: AppSizes.md),
-                        const EstimatorCard(),
-                        SizedBox(height: AppSizes.md),
-                        const DryCleaningSpecialInstructionsCard(),
-                        SizedBox(height: AppSizes.md),
-                        const DryCleaningOrderSummaryCard(),
-                        SizedBox(height: AppSizes.lg),
-                        _buildActionButtons(controller),
-                        SizedBox(height: AppSizes.lg),
-                        const ScheduleDeliveryCard(),
-                        SizedBox(height: AppSizes.md),
-                        const PricingInfoCard(),
-                        SizedBox(height: AppSizes.md),
-                        const UpchargeMenuCard(),
-                        SizedBox(height: AppSizes.md),
-                        const DisclaimersCard(),
-                        SizedBox(height: AppSizes.xl),
-                      ],
-                    ),
-                  ),
-                ],
+              Image.asset(
+                'assets/images/placeholder.png',
+                width: screenWidth,
+                fit: BoxFit.fitWidth,
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
