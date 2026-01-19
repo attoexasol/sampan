@@ -16,6 +16,8 @@ import '../widgets/specialty_service_card.dart';
 import 'service_products_screen.dart';
 import '../bindings/laundry_binding.dart';
 import '../modules/laundry/laundry_view.dart';
+import '../bindings/dry_cleaning_binding.dart';
+import '../modules/dry_cleaning/dry_cleaning_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -227,9 +229,10 @@ class _BookScreenState extends State<BookScreen> {
                             title: 'Dry Cleaning',
                             subtitle: 'Professional Care',
                             isSelected: false,
-                            onTap: () => Get.to(() => ServiceProductsScreen(
-                              category: ProductCategory.dryCleaning,
-                            )),
+                            onTap: () => Get.to(
+                              () => const DryCleaningView(),
+                              binding: DryCleaningBinding(),
+                            ),
                           ),
                         ),
                       ],
