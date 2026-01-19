@@ -10,7 +10,7 @@ import '../modules/schedule/schedule_view.dart';
 import '../widgets/header_widget.dart';
 
 class LaundryHowItWorksPage extends StatefulWidget {
-  const LaundryHowItWorksPage({Key? key}) : super(key: key);
+  const LaundryHowItWorksPage({super.key});
 
   @override
   State<LaundryHowItWorksPage> createState() => _LaundryHowItWorksPageState();

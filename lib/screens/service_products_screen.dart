@@ -17,9 +17,9 @@ class ServiceProductsScreen extends StatelessWidget {
   final ProductCategory category;
 
   const ServiceProductsScreen({
-    Key? key,
+    super.key,
     required this.category,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

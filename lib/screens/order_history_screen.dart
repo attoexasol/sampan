@@ -10,7 +10,7 @@ import '../widgets/order_summary_card_widget.dart';
 import '../widgets/header_widget.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
-  const OrderHistoryScreen({Key? key}) : super(key: key);
+  const OrderHistoryScreen({super.key});
 
   @override
   State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();

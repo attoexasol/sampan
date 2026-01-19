@@ -10,10 +10,10 @@ class PaymentMethodDialog extends StatefulWidget {
   final String orderId;
 
   const PaymentMethodDialog({
-    Key? key,
+    super.key,
     required this.totalAmount,
     required this.orderId,
-  }) : super(key: key);
+  });
 
   @override
   State<PaymentMethodDialog> createState() => _PaymentMethodDialogState();

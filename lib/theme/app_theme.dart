@@ -13,12 +13,10 @@ class AppTheme {
         primary: AppColors.primary,
         secondary: AppColors.secondary,
         surface: AppColors.card,
-        background: AppColors.background,
         error: AppColors.destructive,
         onPrimary: AppColors.primaryForeground,
         onSecondary: AppColors.secondaryForeground,
         onSurface: AppColors.cardForeground,
-        onBackground: AppColors.foreground,
         onError: AppColors.destructiveForeground,
       ),
 

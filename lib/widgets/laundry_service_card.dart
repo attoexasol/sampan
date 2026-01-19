@@ -12,13 +12,13 @@ class LaundryServiceCard extends StatelessWidget {
   final bool hasRushService;
 
   const LaundryServiceCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.description,
     required this.price,
     required this.serviceTypes,
     this.hasRushService = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

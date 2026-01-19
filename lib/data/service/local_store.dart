@@ -72,7 +72,7 @@ class LocalStore {
       debugPrint('✅ saveCustomerId: Saved customer ID "$cid" to key "$_customerIdKey"');
       
       // Verify it was saved
-      final verify = await prefs.getString(_customerIdKey);
+      final verify = prefs.getString(_customerIdKey);
       debugPrint('✅ saveCustomerId: Verification - Retrieved value: "$verify"');
     } catch (e) {
       debugPrint('❌ saveCustomerId: Error saving customer ID: $e');

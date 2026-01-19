@@ -1,5 +1,4 @@
 import 'package:get/get.dart';
-import '../../data/models/service_model.dart';
 
 class HomeController extends GetxController {
   final RxInt currentTab = 0.obs;

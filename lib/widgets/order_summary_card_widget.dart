@@ -208,7 +208,7 @@ class OrderSummaryCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const OrderSummaryCard({
-    Key? key,
+    super.key,
     required this.items,
     required this.subTotal,
     required this.deliveryFee,
@@ -224,7 +224,7 @@ class OrderSummaryCard extends StatelessWidget {
     this.createdAt,
     this.isHistoryCard = false,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -577,7 +577,7 @@ class OrderSummaryCard extends StatelessWidget {
 }
 
 class EmptyOrderSummaryCard extends StatelessWidget {
-  const EmptyOrderSummaryCard({Key? key}) : super(key: key);
+  const EmptyOrderSummaryCard({super.key});
 
   @override
   Widget build(BuildContext context) {

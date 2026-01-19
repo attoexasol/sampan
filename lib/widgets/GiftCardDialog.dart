@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class GiftCardDialog extends StatefulWidget {
-  const GiftCardDialog({Key? key}) : super(key: key);
+  const GiftCardDialog({super.key});
 
   @override
   State<GiftCardDialog> createState() => _GiftCardDialogState();

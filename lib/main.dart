@@ -28,7 +28,7 @@ Future<void> main() async {
 }
 
 class SampanApp extends StatelessWidget {
-  const SampanApp({Key? key}) : super(key: key);
+  const SampanApp({super.key});
 
   @override
   Widget build(BuildContext context) {

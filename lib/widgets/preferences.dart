@@ -4,7 +4,7 @@ import '../../data/service/local_store.dart';
 import '../../data/service/network_caller.dart';
 
 class PreferencesScreen extends StatefulWidget {
-  const PreferencesScreen({Key? key}) : super(key: key);
+  const PreferencesScreen({super.key});
 
   @override
   State<PreferencesScreen> createState() => _PreferencesScreenState();
