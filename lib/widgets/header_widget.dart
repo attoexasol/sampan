@@ -4,7 +4,9 @@ import '../constants/colors.dart'; // update path if needed
 import '../constants/sizes.dart'; // your AppSizes file
 
 class HeaderWidget extends StatelessWidget {
-  const HeaderWidget({super.key});
+  final String? subtitle;
+  
+  const HeaderWidget({super.key, this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -19,15 +21,13 @@ class HeaderWidget extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // 🧼 Logo
           Image.asset(
             'assets/images/sampan-logo.png',
-            width: AppSizes.screenWidth * 0.25, // responsive image width
+            width: AppSizes.screenWidth * 0.25,
             height: AppSizes.screenWidth * 0.25,
           ),
           SizedBox(height: AppSizes.md),
 
-          // 🏷️ Brand Name
           Text(
             'SAMPAN',
             style: GoogleFonts.outfit(
@@ -38,9 +38,8 @@ class HeaderWidget extends StatelessWidget {
           ),
           SizedBox(height: AppSizes.sm),
 
-          // 🧺 Tagline
           Text(
-            'Laundry & Dry Cleaning',
+            subtitle ?? 'Laundry & Dry Cleaning',
             style: TextStyle(
               fontSize: AppSizes.fontXl,
               fontWeight: FontWeight.w500,
