@@ -116,6 +116,11 @@ class CommonSpecialtyServiceView extends StatelessWidget {
           SizedBox(height: AppSizes.md),
 
                 const SpecialtyDisclaimersCard(),
+                Image.asset(
+                  'assets/images/placeholder.png',
+                  width: MediaQuery.of(context).size.width,
+                  fit: BoxFit.fitWidth,
+                ),
               ],
             ),
           ),
