@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import '../../widgets/elevated_icon_button.dart';
+import '../../constants/colors.dart';
+import '../../constants/sizes.dart';
 import '../recover_acc/forgot_pass.dart';
 import '../signup/signup_binding.dart';
 import '../signup/signup_view.dart';
@@ -14,78 +14,186 @@ class LoginView extends GetView<LoginController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(AppSizes.md),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(height: 48.h),
-                  const Text(
-                    'Welcome Back',
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Log in to your Sampan Laundry account',
-                    textAlign: TextAlign.center,
-                  ),
-                  // SizedBox(height: 24.h),
-                  //
-                  // // Social login (placeholders)
-                  // Elevated_Icon_Button(
-                  //   onTap: () {},
-                  //   icon: Icon(FontAwesomeIcons.google, size: 20.r),
-                  //   buttonName: "Continue with Google",
-                  // ),
-                  // SizedBox(height: 10.h),
-                  // Elevated_Icon_Button(
-                  //   onTap: () {},
-                  //   icon: Icon(FontAwesomeIcons.apple, size: 20.r),
-                  //   buttonName: "Continue with Apple",
-                  // ),
-                  // SizedBox(height: 10.h),
-                  // Elevated_Icon_Button(
-                  //   onTap: () {},
-                  //   icon: Icon(FontAwesomeIcons.facebookF, size: 20.r),
-                  //   buttonName: "Continue with Facebook",
-                  // ),
-
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20.h),
-                    child: Row(
-                      children: [
-                        const Expanded(child: Divider()),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            "Or log in with email",
-                            style: TextStyle(fontSize: 14.sp, color: Colors.grey),
-                          ),
-                        ),
-                        const Expanded(child: Divider()),
-                      ],
-                    ),
-                  ),
-
-                  // ----------- FORM ------------
-                  Form(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(AppSizes.lg),
+                  child: Form(
                     key: controller.formKey,
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Email field
+                        Text(
+                          'Welcome Back',
+                          style: TextStyle(
+                            fontSize: AppSizes.fontXxl,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.foreground,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: AppSizes.sm),
+                        Text(
+                          'Log in to your Sampan Laundry Service account',
+                          style: TextStyle(
+                            fontSize: AppSizes.fontMd,
+                            color: AppColors.mutedForeground,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: AppSizes.xl),
+
+                        Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {},
+                            splashColor: Colors.black.withOpacity(0.08),
+                            highlightColor: Colors.black.withOpacity(0.06),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(FontAwesomeIcons.google, size: AppSizes.iconMd, color: AppColors.foreground),
+                                  SizedBox(width: AppSizes.sm),
+                                  Text(
+                                    'Continue with Google',
+                                    style: TextStyle(color: AppColors.foreground),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.md),
+                        Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {},
+                            splashColor: Colors.black.withOpacity(0.08),
+                            highlightColor: Colors.black.withOpacity(0.06),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(FontAwesomeIcons.apple, size: AppSizes.iconMd, color: AppColors.foreground),
+                                  SizedBox(width: AppSizes.sm),
+                                  Text(
+                                    'Continue with Apple',
+                                    style: TextStyle(color: AppColors.foreground),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.md),
+                        Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {},
+                            splashColor: Colors.black.withOpacity(0.08),
+                            highlightColor: Colors.black.withOpacity(0.06),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(FontAwesomeIcons.facebookF, size: AppSizes.iconMd, color: AppColors.foreground),
+                                  SizedBox(width: AppSizes.sm),
+                                  Text(
+                                    'Continue with Facebook',
+                                    style: TextStyle(color: AppColors.foreground),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.lg),
+
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: AppColors.border)),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: AppSizes.md),
+                              child: Text(
+                                'Or log in with email',
+                                style: TextStyle(
+                                  color: AppColors.mutedForeground,
+                                  fontSize: AppSizes.fontSm,
+                                ),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: AppColors.border)),
+                          ],
+                        ),
+                        SizedBox(height: AppSizes.lg),
+
+                        Text(
+                          'Email',
+                          style: TextStyle(
+                            fontSize: AppSizes.fontMd,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.foreground,
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.xs),
                         TextFormField(
                           controller: controller.emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            prefixIcon: Icon(Icons.email),
-                            border: OutlineInputBorder(),
-                          ),
                           keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                            contentPadding: EdgeInsets.all(AppSizes.md),
+                          ),
                           validator: (v) {
                             final value = (v ?? '').trim();
                             if (value.isEmpty) return 'Email is required';
@@ -93,16 +201,36 @@ class LoginView extends GetView<LoginController> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: AppSizes.md),
 
-                        // Password with toggle
+                        Text(
+                          'Password',
+                          style: TextStyle(
+                            fontSize: AppSizes.fontMd,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.foreground,
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.xs),
                         Obx(() => TextFormField(
                           controller: controller.passwordController,
                           obscureText: controller.obscurePassword.value,
                           decoration: InputDecoration(
-                            labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock),
-                            border: const OutlineInputBorder(),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                            contentPadding: EdgeInsets.all(AppSizes.md),
                             suffixIcon: IconButton(
                               onPressed: controller.togglePasswordVisibility,
                               icon: Icon(
@@ -119,58 +247,96 @@ class LoginView extends GetView<LoginController> {
                             return null;
                           },
                         )),
+                        SizedBox(height: AppSizes.sm),
+
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => Get.to(() => ForgetPasswordScreen()),
+                            child: Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: AppSizes.fontSm,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.lg),
+
+                        Obx(() => ElevatedButton(
+                          onPressed: controller.isLoading.value ? null : controller.login,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                            ),
+                          ),
+                          child: controller.isLoading.value
+                              ? SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Log In',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        )),
+                        SizedBox(height: AppSizes.lg),
+
+                        OutlinedButton(
+                          onPressed: controller.navigateToHome,
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: AppColors.border),
+                            padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.arrow_back, size: 18, color: AppColors.foreground),
+                              SizedBox(width: AppSizes.xs),
+                              Text(
+                                'Back to Order',
+                                style: TextStyle(color: AppColors.foreground),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.lg),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Don't have an account? ",
+                              style: TextStyle(color: AppColors.mutedForeground),
+                            ),
+                            TextButton(
+                              onPressed: () => Get.to(() => const SignupView(), binding: SignupBinding()),
+                              child: Text(
+                                'Sign up',
+                                style: TextStyle(color: AppColors.primary),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Get.to(() => ForgetPasswordScreen()),
-                      child: const Text(
-                        "Forget Password?",
-                        style: TextStyle(color: Color(0xff1bbc9c)),
-                      ),
-                    ),
-                  ),
-
-                  // Login button
-                  Obx(() => SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed:
-                      controller.isLoading.value ? null : controller.login,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: controller.isLoading.value
-                          ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                          : const Text('Log In'),
-                    ),
-                  )),
-                  const SizedBox(height: 16),
-
-                  Elevated_Icon_Button(
-                    onTap: controller.navigateToHome,
-                    icon: Icon(FontAwesomeIcons.arrowLeft, size: 20.r),
-                    buttonName: "Back to Order",
-                  ),
-                  SizedBox(height: 10.h),
-
-                  TextButton(
-                    onPressed: () =>
-                        Get.to(() => const SignupView(), binding: SignupBinding()),
-                    child: const Text("Don't have an account? Sign up"),
-                  ),
-                ],
+                ),
               ),
             ),
           ),

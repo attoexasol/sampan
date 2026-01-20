@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import '../../widgets/elevated_icon_button.dart';
+import '../../constants/colors.dart';
+import '../../constants/sizes.dart';
 import 'signup_controller.dart';
 
 class SignupView extends GetView<SignupController> {
@@ -11,269 +11,547 @@ class SignupView extends GetView<SignupController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          color: Color(0xffe3f1f0)
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 430),
-                child: Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(AppSizes.md),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Form(
+              key: controller.formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Create Your Account',
+                    style: TextStyle(
+                      fontSize: AppSizes.fontXxl,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.foreground,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Form(
-                      key: controller.formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Header
-                          Text(
-                            'Create Your Account',
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                  SizedBox(height: AppSizes.sm),
+                  Text(
+                    'Enter your details to get started with Sampan Laundry Service',
+                    style: TextStyle(
+                      fontSize: AppSizes.fontMd,
+                      color: AppColors.mutedForeground,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: AppSizes.xl),
+
+                  Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {},
+                      splashColor: Colors.black.withOpacity(0.08),
+                      highlightColor: Colors.black.withOpacity(0.06),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(FontAwesomeIcons.google, size: AppSizes.iconMd, color: Colors.white),
+                            SizedBox(width: AppSizes.sm),
+                            const Text(
+                              'Continue with Google',
+                              style: TextStyle(color: Colors.white),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Enter your details to get started with Sampan Laundry Service',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 24),
-
-                          SizedBox(height: 10.h),
-                          Elevated_Icon_Button(
-                            onTap: () {},
-                            icon: Icon(FontAwesomeIcons.google, size: 20.r),
-                            buttonName: "Continue with Google",
-                          ),
-                          SizedBox(height: 10.h),
-                          Elevated_Icon_Button(
-                            onTap: () {},
-                            icon: Icon(FontAwesomeIcons.apple, size: 20.r),
-                            buttonName: "Continue with Apple",
-                          ),
-                          SizedBox(height: 10.h),
-                          Elevated_Icon_Button(
-                            onTap: () {},
-                            icon: Icon(FontAwesomeIcons.facebookF, size: 20.r),
-                            buttonName: "Continue with Facebook",
-                          ),
-                          SizedBox(height: 10.h),
-                          // Divider
-                          Row(
-                            children: [
-                              const Expanded(child: Divider()),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  'Or sign up with email',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                                ),
-                              ),
-                              const Expanded(child: Divider()),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Personal Information
-                          _buildSectionTitle(context, 'Personal Information'),
-
-                              TextFormField(
-                                controller: controller.firstNameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'First Name',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) =>
-                                value?.isEmpty ?? true ? 'Required' : null,
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: controller.lastNameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Last Name',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) =>
-                                value?.isEmpty ?? true ? 'Required' : null,
-                              ),
-
-                          const SizedBox(height: 24),
-
-                          // Contact Information
-                          _buildSectionTitle(context, 'Contact Information'),
-                          TextFormField(
-                            controller: controller.emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              labelText: 'Email',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value?.isEmpty ?? true) return 'Required';
-                              if (!GetUtils.isEmail(value!)) return 'Invalid email';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: controller.phoneController,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
-                              labelText: 'Phone Number',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Security
-                          _buildSectionTitle(context, 'Security'),
-                              Obx(() => TextFormField(
-                                controller: controller.passwordController,
-                                obscureText: controller.obscurePassword.value,
-                                decoration: InputDecoration(
-                                  labelText: 'Password',
-                                  border: const OutlineInputBorder(),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      controller.obscurePassword.value
-                                          ? Icons.visibility_off
-                                          : Icons.visibility,
-                                    ),
-                                    onPressed: controller.togglePasswordVisibility,
-                                  ),
-                                ),
-                                validator: (value) {
-                                  if (value?.isEmpty ?? true) return 'Required';
-                                  if (value!.length < 6) return 'Min 6 characters';
-                                  return null;
-                                },
-                              )),
-                              const SizedBox(height: 16),
-                              Obx(() => TextFormField(
-                                controller: controller.confirmPasswordController,
-                                obscureText: controller.obscureConfirmPassword.value,
-                                decoration: InputDecoration(
-                                  labelText: 'Confirm Password',
-                                  border: const OutlineInputBorder(),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      controller.obscureConfirmPassword.value
-                                          ? Icons.visibility_off
-                                          : Icons.visibility,
-                                    ),
-                                    onPressed: controller.toggleConfirmPasswordVisibility,
-                                  ),
-                                ),
-                                validator: controller.validateConfirmPassword,
-                              )),
-
-                          const SizedBox(height: 24),
-
-                          // Address
-                          _buildSectionTitle(context, 'Address'),
-                          TextFormField(
-                            controller: controller.streetController,
-                            decoration: const InputDecoration(
-                              labelText: 'Street Address',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
-                          ),
-                          const SizedBox(height: 16),
-
-                              TextFormField(
-                                controller: controller.cityController,
-                                decoration: const InputDecoration(
-                                  labelText: 'City',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) =>
-                                value?.isEmpty ?? true ? 'Required' : null,
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: controller.stateController,
-                                decoration: const InputDecoration(
-                                  labelText: 'State',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) =>
-                                value?.isEmpty ?? true ? 'Required' : null,
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: controller.zipCodeController,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'ZIP Code',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) =>
-                                value?.isEmpty ?? true ? 'Required' : null,
-                              ),
-
-                          const SizedBox(height: 24),
-
-                          // Submit Button
-                          Obx(() => ElevatedButton(
-                            onPressed: controller.isLoading.value
-                                ? null
-                                : controller.signup,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            child: controller.isLoading.value
-                                ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                                : const Text('Create Account'),
-                          )),
-                          const SizedBox(height: 12),
-
-                          Elevated_Icon_Button(
-                            onTap: controller.navigateToHome,
-                            icon: Icon(FontAwesomeIcons.arrowLeft, size: 20.r),
-                            buttonName: "Back to Order",
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Login Link
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Already have an account? ',
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                              TextButton(
-                                onPressed: controller.navigateToLogin,
-                                child: const Text('Log in'),
-                              ),
-                            ],
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  SizedBox(height: AppSizes.md),
+                  Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {},
+                      splashColor: Colors.black.withOpacity(0.08),
+                      highlightColor: Colors.black.withOpacity(0.06),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(FontAwesomeIcons.apple, size: AppSizes.iconMd, color: AppColors.foreground),
+                            SizedBox(width: AppSizes.sm),
+                            Text(
+                              'Continue with Apple',
+                              style: TextStyle(color: AppColors.foreground),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.md),
+                  Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {},
+                      splashColor: Colors.black.withOpacity(0.08),
+                      highlightColor: Colors.black.withOpacity(0.06),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(FontAwesomeIcons.facebookF, size: AppSizes.iconMd, color: AppColors.foreground),
+                            SizedBox(width: AppSizes.sm),
+                            Text(
+                              'Continue with Facebook',
+                              style: TextStyle(color: AppColors.foreground),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.lg),
+
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: AppColors.border)),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: AppSizes.md),
+                        child: Text(
+                          'Or sign up with email',
+                          style: TextStyle(
+                            color: AppColors.mutedForeground,
+                            fontSize: AppSizes.fontSm,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: AppColors.border)),
+                    ],
+                  ),
+                  SizedBox(height: AppSizes.lg),
+
+                  _buildSectionTitle('Personal Information'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.firstNameController,
+                          decoration: InputDecoration(
+                            labelText: 'First Name',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                          ),
+                          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.lastNameController,
+                          decoration: InputDecoration(
+                            labelText: 'Last Name',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                          ),
+                          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: AppSizes.lg),
+
+                  _buildSectionTitle('Contact Information'),
+                  TextFormField(
+                    controller: controller.emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) return 'Required';
+                      if (!GetUtils.isEmail(value!)) return 'Invalid email';
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: AppSizes.md),
+                  TextFormField(
+                    controller: controller.phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: 'Phone Number',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                    ),
+                    validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  SizedBox(height: AppSizes.lg),
+
+                  _buildSectionTitle('Security'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Obx(() => TextFormField(
+                          controller: controller.passwordController,
+                          obscureText: controller.obscurePassword.value,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                controller.obscurePassword.value
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: controller.togglePasswordVisibility,
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value?.isEmpty ?? true) return 'Required';
+                            if (value!.length < 6) return 'Min 6 characters';
+                            return null;
+                          },
+                        )),
+                      ),
+                      SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: Obx(() => TextFormField(
+                          controller: controller.confirmPasswordController,
+                          obscureText: controller.obscureConfirmPassword.value,
+                          decoration: InputDecoration(
+                            labelText: 'Confirm Password',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                controller.obscureConfirmPassword.value
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: controller.toggleConfirmPasswordVisibility,
+                            ),
+                          ),
+                          validator: controller.validateConfirmPassword,
+                        )),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: AppSizes.lg),
+
+                  _buildSectionTitle('Address'),
+                  TextFormField(
+                    controller: controller.streetController,
+                    decoration: InputDecoration(
+                      labelText: 'Street Address',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                    ),
+                    validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  SizedBox(height: AppSizes.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.cityController,
+                          decoration: InputDecoration(
+                            labelText: 'City',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                          ),
+                          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.stateController,
+                          decoration: InputDecoration(
+                            labelText: 'State',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                          ),
+                          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.zipCodeController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'ZIP Code',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                          ),
+                          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: AppSizes.lg),
+
+                  _buildSectionTitle('Payment Information'),
+                  TextFormField(
+                    controller: controller.cardNumberController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Card Number',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                    ),
+                    validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  SizedBox(height: AppSizes.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.cardExpiryController,
+                          decoration: InputDecoration(
+                            labelText: 'Expiry Date',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                          ),
+                          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.cardCVVController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'CVV',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                          ),
+                          validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: AppSizes.xl),
+
+                  Obx(() => ElevatedButton(
+                    onPressed: controller.isLoading.value ? null : controller.signup,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: AppSizes.md),
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      ),
+                    ),
+                    child: controller.isLoading.value
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Create Account'),
+                  )),
+                  SizedBox(height: AppSizes.lg),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Already have an account? ',
+                        style: TextStyle(color: AppColors.mutedForeground),
+                      ),
+                      TextButton(
+                        onPressed: controller.navigateToLogin,
+                        child: const Text('Log in'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -282,30 +560,15 @@ class SignupView extends GetView<SignupController> {
     );
   }
 
-
-  Widget _buildSocialButton(
-      BuildContext context,
-      String text,
-      IconData icon,
-      VoidCallback onPressed,
-      ) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon),
-      label: Text(text),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(BuildContext context, String title) {
+  Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.only(bottom: AppSizes.md),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w600,
+        style: TextStyle(
+          fontSize: AppSizes.fontLg,
+          fontWeight: FontWeight.bold,
+          color: AppColors.foreground,
         ),
       ),
     );
