@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 
 class SpecialtyServiceCard extends StatelessWidget {
-  final IconData icon;
+  final List<IconData> icons;
   final String title;
+  final String? subtitle;
   final VoidCallback onTap;
 
   const SpecialtyServiceCard({
     super.key,
-    required this.icon,
+    required this.icons,
     required this.title,
+    this.subtitle,
     required this.onTap,
   });
 
@@ -31,10 +33,18 @@ class SpecialtyServiceCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: AppColors.primary,
-              size: 28,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: icons.map((icon) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(
+                    icon,
+                    color: AppColors.primary,
+                    size: 28,
+                  ),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 8),
             Text(
@@ -46,6 +56,18 @@ class SpecialtyServiceCard extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle!,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.mutedForeground,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ),
       ),

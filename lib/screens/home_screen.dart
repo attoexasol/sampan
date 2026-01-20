@@ -250,38 +250,17 @@ class _BookScreenState extends State<BookScreen> {
                     ),
                     SizedBox(height: AppSizes.md),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SpecialtyServiceCard(
-                            icon: LucideIcons.scissors,
-                            title: 'Alterations',
-                            onTap: () => Get.to(() => ServiceProductsScreen(
-                              category: ProductCategory.alterations,
-                            )),
-                          ),
-                        ),
-                        SizedBox(width: AppSizes.md),
-                        Expanded(
-                          child: SpecialtyServiceCard(
-                            icon: LucideIcons.wind,
-                            title: 'Steaming',
-                            onTap: () => Get.to(() => ServiceProductsScreen(
-                              category: ProductCategory.alterations,
-                            )),
-                          ),
-                        ),
-                        SizedBox(width: AppSizes.md),
-                        Expanded(
-                          child: SpecialtyServiceCard(
-                            icon: LucideIcons.shieldCheck,
-                            title: 'Shoe Care',
-                            onTap: () => Get.to(() => ServiceProductsScreen(
-                              category: ProductCategory.alterations,
-                            )),
-                          ),
-                        ),
+                    SpecialtyServiceCard(
+                      icons: [
+                        LucideIcons.scissors,
+                        LucideIcons.wind,
+                        LucideIcons.shieldCheck,
                       ],
+                      title: 'Alterations / Steaming / Shoe Care',
+                      subtitle: 'Specialty garment care services',
+                      onTap: () => Get.to(() => ServiceProductsScreen(
+                        category: ProductCategory.alterations,
+                      )),
                     ),
                   ],
                 ),
