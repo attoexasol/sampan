@@ -3,9 +3,9 @@ class Urls{
 
 
   // Auth
-   static const String accountCreate = "$_baseUrl/addCustomer";
-   static const String logInAcc = "$_baseUrl/loginCustomer";
-   static const String PreferencesMsg = "$_baseUrl/addMessage";
+   static const String accountCreate = "$_baseUrl/addCustomer";                                                   // Creadte user
+   static const String logInAcc = "$_baseUrl/loginCustomer";                                                      // LogIn
+   static const String PreferencesMsg = "$_baseUrl/addMessage";                                                   //
    static const String deleteCustomer = "$_baseUrl/deleteCustomer";
 
 
@@ -39,10 +39,16 @@ class Urls{
 
 
 
-
-
-
-
+// 1. Premium Bag Service ;
+// 2 Want it sooner?     ;
+// 3 Your Wallet         ;
+// 4 Invite Friends & Earn $15
+// 5 Rate Your Experience
+// 6 Delivery Address
+//
+// 2. Subscriptions                https://cleancloudapp.com/api/getSubscription
+// 4. Your Order History           https://cleancloudapp.com/api/getMessages
+// 6. Send a Gift Card             https://cleancloudapp.com/api/getReferral
 
 
 }
