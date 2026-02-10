@@ -93,10 +93,22 @@ class LaundryController extends GetxController {
     }
   }
 
-  /// Toggle Premium Bag service
-  void togglePremiumBag() {
+  /// Toggle Premium Bag service (Elite Express Bag from API only)
+  void togglePremiumBag(ProductsController productsCtrl) {
+    final elite = productsCtrl.eliteExpressBag.value;
+    final price = productsCtrl.eliteExpressBagPrice.value;
+    if (elite == null || price <= 0) {
+      Get.snackbar(
+        'Unavailable',
+        'Premium Bag service is currently unavailable',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
     isPremiumBagSelected.value = !isPremiumBagSelected.value;
-    _updateOrderSummary();
+    _updateOrderSummary(productsCtrl);
   }
 
   /// Toggle Subscription service
@@ -152,17 +164,22 @@ class LaundryController extends GetxController {
   }
 
   /// Update order summary with service selections
-  void _updateOrderSummary() {
-    // Premium Bag
-    if (isPremiumBagSelected.value) {
+  void _updateOrderSummary([ProductsController? productsCtrl]) {
+    final pCtrl = productsCtrl ?? this.productsCtrl;
+    final elite = pCtrl.eliteExpressBag.value;
+    final elitePrice = pCtrl.eliteExpressBagPrice.value;
+
+    // Premium Bag: Elite Express Bag only (product id from API)
+    if (isPremiumBagSelected.value && elite != null && elitePrice > 0) {
       orderCtrl.updateItem(
-        key: 'premium_bag',
-        title: 'Premium Bag',
+        key: elite.id,
+        title: elite.name,
         subtitle: 'Premium Bag Service',
-        price: premiumBagPrice,
+        price: elitePrice,
         qty: 1,
       );
     } else {
+      if (elite != null) orderCtrl.items.remove(elite.id);
       orderCtrl.items.remove('premium_bag');
     }
 

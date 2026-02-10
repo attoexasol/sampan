@@ -210,17 +210,23 @@ class _BookScreenState extends State<BookScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: ServiceCard(
-                            icon: LucideIcons.shirt,
-                            title: 'Laundry',
-                            subtitle: "\$2.25/lb or \$69/bag",
-                           // subtitle: 'Wash & Fold, Bulky Items',
-                            isSelected: false,
-                            onTap: () => Get.to(
-                              () => const LaundryView(),
-                              binding: LaundryBinding(),
-                            ),
-                          ),
+                          child: Obx(() {
+                            final productsCtrl = Get.find<ProductsController>();
+                            final price = productsCtrl.eliteExpressBagPrice.value;
+                            final bagText = price > 0
+                                ? '\$${price.toStringAsFixed(0)}/bag'
+                                : '\$69/bag';
+                            return ServiceCard(
+                              icon: LucideIcons.shirt,
+                              title: 'Laundry',
+                              subtitle: '\$2.25/lb or $bagText',
+                              isSelected: false,
+                              onTap: () => Get.to(
+                                () => const LaundryView(),
+                                binding: LaundryBinding(),
+                              ),
+                            );
+                          }),
                         ),
                         SizedBox(width: AppSizes.md),
                         Expanded(

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../constants/colors.dart';
 import '../../../constants/sizes.dart';
+import '../../../controller/products_controller.dart';
 import '../laundry_controller.dart';
 
 class PremiumBagCard extends StatelessWidget {
@@ -12,6 +13,7 @@ class PremiumBagCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<LaundryController>();
+    final productsCtrl = Get.find<ProductsController>();
     final isExpanded = false.obs;
 
     return Container(
@@ -77,39 +79,51 @@ class PremiumBagCard extends StatelessWidget {
             ),
             child: Column(
               children: [
-                Text(
-                  'Elite Express Bag – \$109 per bag',
-                  style: TextStyle(
-                    fontSize: AppSizes.fontMd,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+                Obx(() {
+                  final price = productsCtrl.eliteExpressBagPrice.value;
+                  final label = price > 0
+                      ? 'Elite Express Bag – \$${price.toStringAsFixed(0)} per bag'
+                      : 'Elite Express Bag – \$109 per bag';
+                  return Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: AppSizes.fontMd,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                    textAlign: TextAlign.center,
+                  );
+                }),
                 SizedBox(height: AppSizes.md),
-                Obx(() => SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => controller.togglePremiumBag(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: controller.isPremiumBagSelected.value
-                          ? AppColors.primary
-                          : AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                Obx(() {
+                  final price = productsCtrl.eliteExpressBagPrice.value;
+                  final available = price > 0 && productsCtrl.eliteExpressBag.value != null;
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: available
+                          ? () => controller.togglePremiumBag(productsCtrl)
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: controller.isPremiumBagSelected.value
+                            ? AppColors.primary
+                            : AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                        ),
+                      ),
+                      child: Text(
+                        controller.isPremiumBagSelected.value ? 'Added' : 'Add',
+                        style: TextStyle(
+                          fontSize: AppSizes.fontSm,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                    child: Text(
-                      controller.isPremiumBagSelected.value ? 'Added' : 'Add',
-                      style: TextStyle(
-                        fontSize: AppSizes.fontSm,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                )),
+                  );
+                }),
               ],
             ),
           ),

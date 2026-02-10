@@ -1,15 +1,20 @@
-class Urls{
-   static const String _baseUrl = "https://cleancloudapp.com/api";
+/// Same api_token for every user (app-level). customerID is per-user and stored locally after login/signup.
+class ApiConfig {
+  static const String apiToken = 'af547bb45f372a7b1171ba7a304fcd84ab319852';
+}
 
+class Urls {
+  static const String _baseUrl = "https://cleancloudapp.com/api";
 
   // Auth
    static const String accountCreate = "$_baseUrl/addCustomer";                                                   // Creadte user
    static const String logInAcc = "$_baseUrl/loginCustomer";                                                      // LogIn
    static const String PreferencesMsg = "$_baseUrl/addMessage";                                                   //
-   static const String deleteCustomer = "$_baseUrl/deleteCustomer";
+  static const String deleteCustomer = "$_baseUrl/deleteCustomer";
+  static const String updateCustomerAddress = "$_baseUrl/updateCustomer";
+  static const String getOrders_History = "$_baseUrl/getOrders";
 
-
-   // Services
+  // Services
    static const String deliverLocation = "$_baseUrl/getRoute";
    static const String PickupDeliveryDates  = "$_baseUrl/getDates";
    static const String PickupDeliveryTimes = "$_baseUrl/getSlots";

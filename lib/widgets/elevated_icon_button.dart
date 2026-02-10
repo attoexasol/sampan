@@ -65,8 +65,8 @@ class Elevated_Icon_Button extends StatelessWidget {
 
   Future<void> logout(dynamic name, var email) async {
     await LocalStore.instance.clearAll(); // clears everything
-    name.value = '';
-    email.value = '';
+    name.value = 'User Name';
+    email.value = 'example@gmail.com';
 
     // Optionally navigate to login
     Get.offAllNamed('/login');

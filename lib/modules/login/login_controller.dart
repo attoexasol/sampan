@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sampan/data/service/network_caller.dart';
 import 'package:sampan/data/service/local_store.dart';
+import 'package:sampan/data/service/utils.dart'; // Urls, ApiConfig
 import 'package:sampan/routes/app_routes.dart';
+import 'package:sampan/controller/profile_controller.dart';
 
 class LoginController extends GetxController {
   final formKey = GlobalKey<FormState>();
@@ -24,49 +26,71 @@ class LoginController extends GetxController {
 
     isLoading.value = true;
 
+    final email = emailController.text.trim();
+    final requestBody = {
+      'api_token': ApiConfig.apiToken,
+      'customerEmail': email,
+      'customerPassword': passwordController.text,
+    };
+
     try {
-      // ✅ Use JSON POST, not form
       final response = await NetworkCaller.postRequest(
-        url: "https://cleancloudapp.com/api/loginCustomer",
-        body: {
-          "api_token": "af547bb45f372a7b1171ba7a304fcd84ab319852",
-          "customerEmail": emailController.text.trim(),
-          "customerPassword": passwordController.text,
-        },
+        url: Urls.logInAcc,
+        body: requestBody,
       );
 
       final body = response.body ?? {};
 
       if (response.isSuccess && body['Success'] == 'True') {
-        // ✅ Save response data
-        debugPrint('🔍 Login: Response body: $body');
-        debugPrint('🔍 Login: Response body type: ${body.runtimeType}');
-        debugPrint('🔍 Login: Response body keys: ${body.keys.toList()}');
-        
-        // Save API response first
-        await LocalStore.instance.saveApiResponse(body);
-        
-        // Extract and save customer ID
+        final customerId = body['cid']?.toString() ?? '';
+
+        // Name: 1) from API, 2) from storage, 3) derive from email
+        String nameToSave = 'User Name';
+        final apiName = body['customerName'] ?? body['CustomerName'] ?? body['name'] ?? body['Name'];
+        if (apiName != null && apiName.toString().trim().isNotEmpty) {
+          nameToSave = apiName.toString().trim();
+        } else {
+          final existingName = await LocalStore.instance.getUserName();
+          if (existingName != null && existingName.trim().isNotEmpty) {
+            nameToSave = existingName.trim();
+          } else {
+            nameToSave = _displayNameFromEmail(email);
+          }
+        }
+
+        // Address & phone: from API if present, else keep existing local values
+        String? addressToSave = body['customerAddress']?.toString().trim();
+        if (addressToSave == null || addressToSave.isEmpty) {
+          addressToSave = await LocalStore.instance.getCustomerAddress();
+        }
+        String? phoneToSave = body['customerTel']?.toString().trim() ?? body['customerPhone']?.toString().trim();
+        if (phoneToSave == null || phoneToSave.isEmpty) {
+          phoneToSave = await LocalStore.instance.getUserPhone();
+        }
+        final instructionsToSave = await LocalStore.instance.getDeliveryInstructions();
+
+        // Save all user info locally so it updates dynamically across the app (customerID is per-user; api_token is same for all)
+        await LocalStore.instance.saveSession(
+          customerId: customerId,
+          apiToken: ApiConfig.apiToken,
+          name: nameToSave,
+          email: email,
+          phone: phoneToSave,
+          address: addressToSave,
+          instructions: instructionsToSave,
+        );
         await LocalStore.instance.saveCustomerIdFromResponse(body);
-        
-        // Wait a bit to ensure async operations complete
-        await Future.delayed(const Duration(milliseconds: 100));
-        
-        // Verify customer ID was saved
-        final savedCustomerId = await LocalStore.instance.getCustomerId();
-        debugPrint('🔍 Login: Verification - Saved customer ID: $savedCustomerId');
-        
-        // Verify API response was saved
-        final savedResponse = await LocalStore.instance.getLastApiResponse();
-        debugPrint('🔍 Login: Verification - Saved API response exists: ${savedResponse != null}');
-        
         await LocalStore.instance.setLoggedIn(true);
-        
-        final isLoggedIn = await LocalStore.instance.isLoggedIn();
-        debugPrint('🔍 Login: Verification - Is logged in flag: $isLoggedIn');
-        
-        // Debug: Print all stored data
-        await LocalStore.instance.debugPrintAllStoredData();
+
+        final session = Get.find<ProfileController>();
+        await session.setSession(
+          name: nameToSave,
+          email: email,
+          customerId: customerId,
+          apiToken: ApiConfig.apiToken,
+          phone: phoneToSave,
+          address: addressToSave,
+        );
 
         Get.snackbar('Success 🎉', 'Login successful!',
             backgroundColor: Colors.green, colorText: Colors.white);
@@ -92,6 +116,21 @@ class LoginController extends GetxController {
 
 
   // ✅ Optional quick helper (used in LoginView “Back to Order”)
+  static String _displayNameFromEmail(String email) {
+    if (email.trim().isEmpty) return 'User Name';
+    final beforeAt = email.split('@').first.trim();
+    if (beforeAt.isEmpty) return 'User Name';
+    final withSpaces = beforeAt.replaceAll(RegExp(r'[._]'), ' ');
+    final words = withSpaces.split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+    if (words.isEmpty) return 'User Name';
+    final capitalized = words
+        .map((w) => w.length > 1
+            ? w[0].toUpperCase() + w.substring(1).toLowerCase()
+            : w.toUpperCase())
+        .join(' ');
+    return capitalized.isNotEmpty ? capitalized : 'User Name';
+  }
+
   void navigateToHome() => Get.offAllNamed(Routes.HOME);
 
   @override

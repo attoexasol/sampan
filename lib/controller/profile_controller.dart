@@ -5,30 +5,145 @@ import 'package:sampan/data/models/user_profile.dart';
 import 'package:sampan/routes/app_routes.dart';
 
 class ProfileController extends GetxController {
-  /// Reactive observables for UI binding
-  final name = ''.obs;
-  final email = ''.obs;
+  static const String defaultUserName = 'User Name';
+  static const String defaultUserEmail = 'example@gmail.com';
+
+  /// Reactive observables for UI binding (single source of truth for session display)
+  final name = defaultUserName.obs;
+  final email = defaultUserEmail.obs;
+  final customerId = ''.obs;
+  final apiToken = ''.obs;
   final phone = ''.obs;
+  final address = ''.obs;
+  final isLoggedIn = false.obs;
+
+  /// Expose for Obx: userName / userEmail (same as name/email)
+  RxString get userName => name;
+  RxString get userEmail => email;
 
   @override
   void onInit() {
     super.onInit();
-    refreshProfile(); // auto-load saved info
+    loadFromStorage();
   }
 
-  /// ✅ Refresh data from SharedPreferences
-  Future<void> refreshProfile() async {
+  /// Load name, email, customerId, apiToken, phone, address from LocalStore so they update dynamically across the app.
+  Future<void> loadFromStorage() async {
     try {
+      final storedName = await LocalStore.instance.getUserName();
+      final storedEmail = await LocalStore.instance.getUserEmail();
+      final savedCid = await LocalStore.instance.getCustomerId();
+      final savedToken = await LocalStore.instance.getApiToken();
+      final storedAddress = await LocalStore.instance.getCustomerAddress();
+      final loggedIn = await LocalStore.instance.isLoggedIn();
+
+      if (storedName != null && storedName.trim().isNotEmpty) {
+        name.value = storedName.trim();
+      } else {
+        name.value = defaultUserName;
+      }
+      if (storedEmail != null && storedEmail.trim().isNotEmpty) {
+        email.value = storedEmail.trim();
+      } else {
+        email.value = defaultUserEmail;
+      }
+
+      customerId.value = savedCid?.trim() ?? '';
+      apiToken.value = savedToken?.trim() ?? '';
+      address.value = storedAddress?.trim() ?? '';
+      isLoggedIn.value = loggedIn;
+
       final profile = await LocalStore.instance.getUserProfile();
       if (profile != null) {
-        name.value = profile.fullName;
-        email.value = profile.email;
         phone.value = profile.phone;
       } else {
-        name.value = '';
-        email.value = '';
-        phone.value = '';
+        final storedPhone = await LocalStore.instance.getUserPhone();
+        phone.value = storedPhone?.trim() ?? '';
       }
+    } catch (e) {
+      debugPrint("⚠️ Error in loadFromStorage: $e");
+      name.value = defaultUserName;
+      email.value = defaultUserEmail;
+    }
+  }
+
+  /// Alias for loadFromStorage (keep existing callers working)
+  Future<void> loadFromLocalStore() async => loadFromStorage();
+
+  /// Set session: update Rx first (instant UI), then persist. Name/email/address/phone/customerID stored locally and drive the app.
+  Future<void> setSession({
+    required String name,
+    required String email,
+    required String customerId,
+    required String apiToken,
+    String? phone,
+    String? address,
+  }) async {
+    final nameToSet = (name.trim().isNotEmpty) ? name.trim() : defaultUserName;
+    final emailToSet = (email.trim().isNotEmpty) ? email.trim() : defaultUserEmail;
+    this.name.value = nameToSet;
+    this.email.value = emailToSet;
+    this.customerId.value = customerId;
+    this.apiToken.value = apiToken;
+    if (phone != null) this.phone.value = phone.trim();
+    if (address != null) this.address.value = address.trim();
+    isLoggedIn.value = true;
+    await LocalStore.instance.saveSession(
+      customerId: customerId,
+      apiToken: apiToken,
+      name: nameToSet,
+      email: emailToSet,
+      phone: phone?.trim(),
+      address: address?.trim(),
+    );
+    await LocalStore.instance.setLoggedIn(true);
+  }
+
+  /// Set user session (alias for setSession).
+  Future<void> setUser({
+    required String nameValue,
+    required String emailValue,
+    required String customerId,
+    required String apiToken,
+  }) async => setSession(
+        name: nameValue,
+        email: emailValue,
+        customerId: customerId,
+        apiToken: apiToken,
+      );
+
+  /// Update session (alias for setSession).
+  Future<void> updateSession({
+    required String nameValue,
+    required String emailValue,
+    required String customerId,
+    required String apiToken,
+  }) async => setSession(
+        name: nameValue,
+        email: emailValue,
+        customerId: customerId,
+        apiToken: apiToken,
+      );
+
+  /// Clear session: enforce defaults, then clear storage. Call on logout.
+  Future<void> clearSession() async {
+    name.value = defaultUserName;
+    email.value = defaultUserEmail;
+    customerId.value = '';
+    apiToken.value = '';
+    phone.value = '';
+    address.value = '';
+    isLoggedIn.value = false;
+    await LocalStore.instance.clearSession();
+  }
+
+  /// Alias for clearSession.
+  Future<void> clearUser() async => clearSession();
+
+  /// Refresh name, email, customerId, address, phone from LocalStore so UI updates dynamically.
+  Future<void> refreshProfile() async {
+    try {
+      await loadFromStorage();
     } catch (e) {
       debugPrint("⚠️ Error loading profile: $e");
     }
@@ -47,6 +162,7 @@ class ProfileController extends GetxController {
       );
 
       await LocalStore.instance.saveUserProfile(updated);
+      await LocalStore.instance.saveSession(name: newName, email: newEmail);
       await refreshProfile();
 
       Get.snackbar(
@@ -101,9 +217,8 @@ class ProfileController extends GetxController {
     if (confirm != true) return;
 
     try {
-      await LocalStore.instance.clearAll(); // 🧹 clear SharedPreferences + SecureStorage
-      name.value = '';
-      email.value = '';
+      await clearSession();
+      await LocalStore.instance.clearAll(); // 🧹 clear SharedPreferences
 
       // Navigate back to login
       Get.offAllNamed(Routes.LOGIN);

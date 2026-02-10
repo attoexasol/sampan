@@ -10,6 +10,12 @@ class LocalStore {
   static final LocalStore instance = LocalStore._privateConstructor();
 
   static const String _customerIdKey = 'customer_id';
+  static const String _apiTokenKey = 'api_token';
+  static const String _userNameKey = 'user_name';
+  static const String _userEmailKey = 'user_email';
+  static const String _userPhoneKey = 'user_phone';
+  static const String _customerAddressKey = 'customer_address';
+  static const String _deliveryInstructionsKey = 'delivery_instructions';
   static const String _lastApiResponseKey = 'last_api_response';
   static const String _loggedInKey = 'is_logged_in';
   static const String _userProfileKey = 'user_profile';
@@ -95,6 +101,73 @@ class LocalStore {
       debugPrint('❌ getCustomerId: Error retrieving customer ID: $e');
       return null;
     }
+  }
+
+  // -----------------------------------------------------
+  // SESSION (api_token, customer_id, user_name, user_email)
+  // -----------------------------------------------------
+
+  /// Save session data — single source of truth for user info and delivery address.
+  Future<void> saveSession({
+    String? customerId,
+    String? apiToken,
+    String? name,
+    String? email,
+    String? phone,
+    String? address,
+    String? instructions,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (customerId != null) await prefs.setString(_customerIdKey, customerId);
+    if (apiToken != null) await prefs.setString(_apiTokenKey, apiToken);
+    if (name != null) await prefs.setString(_userNameKey, name);
+    if (email != null) await prefs.setString(_userEmailKey, email);
+    if (phone != null) await prefs.setString(_userPhoneKey, phone);
+    if (address != null) await prefs.setString(_customerAddressKey, address);
+    if (instructions != null) await prefs.setString(_deliveryInstructionsKey, instructions);
+  }
+
+  Future<String?> getApiToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_apiTokenKey);
+  }
+
+  Future<String?> getUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userNameKey);
+  }
+
+  Future<String?> getUserEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userEmailKey);
+  }
+
+  Future<String?> getUserPhone() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userPhoneKey);
+  }
+
+  Future<String?> getCustomerAddress() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_customerAddressKey);
+  }
+
+  Future<String?> getDeliveryInstructions() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_deliveryInstructionsKey);
+  }
+
+  /// Clear session keys (customer_id, api_token, user_name, user_email, user_phone, customer_address, delivery_instructions, is_logged_in).
+  Future<void> clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_customerIdKey);
+    await prefs.remove(_apiTokenKey);
+    await prefs.remove(_userNameKey);
+    await prefs.remove(_userEmailKey);
+    await prefs.remove(_userPhoneKey);
+    await prefs.remove(_customerAddressKey);
+    await prefs.remove(_deliveryInstructionsKey);
+    await prefs.setBool(_loggedInKey, false);
   }
 
   Future<void> saveCustomerIdFromResponse(Map<String, dynamic> json) async {

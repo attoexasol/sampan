@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/service/local_store.dart';
 import '../../data/service/network_caller.dart';
+import '../../data/service/utils.dart';
 import '../constants/colors.dart';
+import '../controller/profile_controller.dart';
 
 class DeliveryAddressDialog extends StatefulWidget {
   const DeliveryAddressDialog({Key? key}) : super(key: key);
@@ -24,8 +26,6 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
   bool _isLoading = false;
   String? _customerId;
 
-  static const String _apiToken = "af547bb45f372a7b1171ba7a304fcd84ab319852";
-
   @override
   void initState() {
     super.initState();
@@ -38,15 +38,66 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
     setState(() => _customerId = cid);
   }
 
-  Future<void> _loadSavedAddress() async {
-    final saved = await LocalStore.instance.getSavedAddress();
-    if (saved != null) {
-      _streetController.text = saved['street'] ?? '';
-      _unitController.text = saved['unit'] ?? '';
-      _cityController.text = saved['city'] ?? '';
-      _postalController.text = saved['postal'] ?? '';
-      _instructionsController.text = saved['instructions'] ?? '';
+  /// Parse "Street, Unit, City, State ZIP" or "Street, City, State ZIP" into fields.
+  void _parseAndPrefillAddress(String addressStr) {
+    if (addressStr.trim().isEmpty) return;
+    final parts = addressStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    if (parts.isEmpty) return;
+    if (parts.length == 1) {
+      _streetController.text = parts[0];
+      return;
     }
+    String street = parts[0];
+    String unit = '';
+    String city = '';
+    String postal = '';
+    final part1 = parts.length > 1 ? parts[1] : '';
+    final isUnit = part1.toLowerCase().contains('apt') ||
+        part1.toLowerCase().contains('unit') ||
+        part1.contains('#');
+    if (parts.length >= 4 && isUnit) {
+      unit = part1;
+      city = parts[2];
+      final lastPart = parts[3];
+      final zipMatch = RegExp(r'\b\d{5}(?:-\d{4})?\b').firstMatch(lastPart);
+      postal = zipMatch != null ? lastPart.substring(zipMatch.start, zipMatch.end) : lastPart;
+    } else if (parts.length >= 3) {
+      city = parts.length >= 4 ? parts[2] : parts[1];
+      final lastPart = parts.length >= 4 ? parts[3] : parts[2];
+      final zipMatch = RegExp(r'\b\d{5}(?:-\d{4})?\b').firstMatch(lastPart);
+      postal = zipMatch != null ? lastPart.substring(zipMatch.start, zipMatch.end) : lastPart;
+      if (parts.length >= 4 && !isUnit) unit = parts[1];
+    } else if (parts.length == 2) {
+      city = parts[1];
+    }
+    _streetController.text = street;
+    _unitController.text = unit;
+    _cityController.text = city;
+    _postalController.text = postal;
+  }
+
+  Future<void> _loadSavedAddress() async {
+    final savedAddress = await LocalStore.instance.getCustomerAddress();
+    final savedInstructions = await LocalStore.instance.getDeliveryInstructions();
+    if (savedAddress != null && savedAddress.trim().isNotEmpty) {
+      _parseAndPrefillAddress(savedAddress);
+    } else {
+      final saved = await LocalStore.instance.getSavedAddress();
+      if (saved != null) {
+        _streetController.text = saved['street'] ?? '';
+        _unitController.text = saved['unit'] ?? '';
+        _cityController.text = saved['city'] ?? '';
+        _postalController.text = saved['postal'] ?? '';
+      }
+    }
+    if (savedInstructions != null) _instructionsController.text = savedInstructions;
+    else {
+      final saved = await LocalStore.instance.getSavedAddress();
+      if (saved != null && saved['instructions'] != null) {
+        _instructionsController.text = saved['instructions'] ?? '';
+      }
+    }
+    if (mounted) setState(() {});
   }
 
   String _composeAddress() {
@@ -60,9 +111,23 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
   }
 
   Future<void> _saveAddress() async {
+    final street = _streetController.text.trim();
+    final city = _cityController.text.trim();
+    final postal = _postalController.text.trim();
+    if (street.isEmpty || city.isEmpty || postal.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Street, City, and Postal Code are required',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
 
-    if (_customerId == null || _customerId!.isEmpty) {
+    final cid = await LocalStore.instance.getCustomerId();
+    final apiToken = await LocalStore.instance.getApiToken();
+    if (cid == null || cid.isEmpty || apiToken == null || apiToken.isEmpty) {
       Get.snackbar(
         'Error',
         'Customer ID not found — please login again',
@@ -72,45 +137,57 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
       return;
     }
 
-    final fullAddress = _composeAddress();
+    final unit = _unitController.text.trim();
+    final customerAddress = unit.isEmpty
+        ? '$street, $city, $postal'
+        : '$street, $unit, $city, $postal';
+    final instructions = _instructionsController.text.trim();
+
     setState(() => _isLoading = true);
 
     final response = await NetworkCaller.postRequest(
-      url: "https://cleancloudapp.com/api/getRoute",
+      url: Urls.updateCustomerAddress,
       body: {
-        "api_token": _apiToken,
-        "customerAddress": fullAddress,
-        "routeID": 1,
+        'api_token': apiToken,
+        'customerID': cid,
+        'customerAddress': customerAddress,
       },
     );
 
     setState(() => _isLoading = false);
 
-    if (response.isSuccess && response.body?['Error'] == null) {
+    if (response.isSuccess && response.body?['Success'] == 'True') {
+      await LocalStore.instance.saveSession(
+        address: customerAddress,
+        instructions: instructions,
+      );
       await LocalStore.instance.saveAddress({
-        'street': _streetController.text.trim(),
-        'unit': _unitController.text.trim(),
-        'city': _cityController.text.trim(),
-        'postal': _postalController.text.trim(),
-        'instructions': _instructionsController.text.trim(),
-        'fullAddress': fullAddress,
+        'street': street,
+        'unit': unit,
+        'city': city,
+        'postal': postal,
+        'instructions': instructions,
+        'fullAddress': customerAddress,
       });
 
+      if (Get.isRegistered<ProfileController>()) {
+        await Get.find<ProfileController>().refreshProfile();
+      }
+
       Get.snackbar(
-        '✅ Success',
+        'Success',
         'Delivery address saved successfully!',
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
 
-      Get.back(); // close dialog only on success
+      Get.back();
     } else {
-      // Keep dialog open — show red message
       final errorMsg = response.body?['Error'] ??
           response.errorMessage ??
           'Address not accepted by server';
       Get.snackbar(
-        '❌ Failed',
+        'Failed',
         errorMsg,
         backgroundColor: Colors.red,
         colorText: Colors.white,

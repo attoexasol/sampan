@@ -35,7 +35,7 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  final ProfileController controller = Get.put(ProfileController());
+  final ProfileController controller = Get.find<ProfileController>();
 
                     // change later
   @override
@@ -297,15 +297,17 @@ class _AccountScreenState extends State<AccountScreen> {
             radius: 32, // h-16 w-16 = 64px diameter = 32px radius
             backgroundColor: AppColors.primary,
             child: Obx(() {
-              final initials = controller.name.value.isNotEmpty
-                  ? controller.name.value
+              final displayName = controller.userName.value;
+              final initials = displayName.isEmpty
+                  ? 'U'
+                  : displayName
                       .split(' ')
                       .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
                       .take(2)
-                      .join()
-                  : 'SM';
+                      .join();
+              final initialText = initials.isEmpty ? 'U' : initials;
               return Text(
-                initials,
+                initialText,
                 style: TextStyle(
                   color: AppColors.primaryForeground,
                   fontSize: 20, // text-xl = 20px
@@ -320,26 +322,32 @@ class _AccountScreenState extends State<AccountScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Obx(() => Text(
-                      controller.name.value.isEmpty
-                          ? 'Sarath Mantravadi'
-                          : controller.name.value,
-                      style: TextStyle(
-                        fontSize: 20, // text-xl = 20px
-                        fontWeight: FontWeight.w600, // font-semibold
-                        color: AppColors.cardForeground,
-                      ),
-                    )),
+                Obx(() {
+                      final nameText = controller.userName.value.trim().isNotEmpty
+                          ? controller.userName.value.trim()
+                          : 'User Name';
+                      return Text(
+                        nameText,
+                        style: TextStyle(
+                          fontSize: 20, // text-xl = 20px
+                          fontWeight: FontWeight.w600, // font-semibold
+                          color: AppColors.cardForeground,
+                        ),
+                      );
+                    }),
                 const SizedBox(height: 4),
-                Obx(() => Text(
-                      controller.email.value.isEmpty
-                          ? 'sarathmantravadi@gmail.com'
-                          : controller.email.value,
-                      style: TextStyle(
-                        fontSize: 14, // text-sm = 14px
-                        color: AppColors.mutedForeground,
-                      ),
-                    )),
+                Obx(() {
+                      final emailText = controller.userEmail.value.trim().isNotEmpty
+                          ? controller.userEmail.value.trim()
+                          : 'example@gmail.com';
+                      return Text(
+                        emailText,
+                        style: TextStyle(
+                          fontSize: 14, // text-sm = 14px
+                          color: AppColors.mutedForeground,
+                        ),
+                      );
+                    }),
               ],
             ),
           ),

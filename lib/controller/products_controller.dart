@@ -10,10 +10,22 @@ class ProductsController extends GetxController {
   final sections = <ProductSection>[].obs;
   final weightSymbol = 'lb'.obs;
 
+  /// Premium Bag: Elite Express Bag from API (single product by exact name)
+  final Rxn<Product> eliteExpressBag = Rxn<Product>();
+  final RxDouble eliteExpressBagPrice = 0.0.obs;
+
   @override
   void onInit() {
     super.onInit();
     loadProducts();
+  }
+
+  /// Find "Elite Express Bag" product by exact name match.
+  Product? findEliteExpressBag(List<Product> products) {
+    for (final p in products) {
+      if ((p.name).trim() == 'Elite Express Bag') return p;
+    }
+    return null;
   }
 
   /// Load products (from cache or API)
@@ -29,6 +41,9 @@ class ProductsController extends GetxController {
         products.value = response.products;
         sections.value = response.sections;
         weightSymbol.value = response.weightSymbol;
+        final elite = findEliteExpressBag(response.products);
+        eliteExpressBag.value = elite;
+        eliteExpressBagPrice.value = elite != null ? elite.price : 0.0;
         debugPrint("✅ Loaded ${products.length} products");
       } else {
         Get.snackbar(

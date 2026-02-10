@@ -117,7 +117,7 @@ import '../controller/profile_controller.dart';
 class EnvironmentalImpactCard extends StatelessWidget {
   EnvironmentalImpactCard({super.key});
 
-  final ProfileController controller = Get.put(ProfileController());
+  final ProfileController controller = Get.find<ProfileController>();
 
   @override
   Widget build(BuildContext context) {
@@ -173,26 +173,32 @@ class EnvironmentalImpactCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Obx(() => Text(
-                      controller.name.value.isEmpty
-                          ? 'User'
-                          : controller.name.value,
-                      style: TextStyle(
-                        fontSize: AppSizes.fontXl,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.foreground,
-                      ),
-                    )),
+                    Obx(() {
+                      final nameText = controller.userName.value.trim().isNotEmpty
+                          ? controller.userName.value.trim()
+                          : 'User Name';
+                      return Text(
+                        nameText,
+                        style: TextStyle(
+                          fontSize: AppSizes.fontXl,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.foreground,
+                        ),
+                      );
+                    }),
                     SizedBox(height: AppSizes.xs),
-                    Obx(() => Text(
-                      controller.email.value.isEmpty
-                          ? 'your@email.com'
-                          : controller.email.value,
-                      style: TextStyle(
-                        color: AppColors.mutedForeground,
-                        fontSize: AppSizes.fontMd,
-                      ),
-                    )),
+                    Obx(() {
+                      final emailText = controller.userEmail.value.trim().isNotEmpty
+                          ? controller.userEmail.value.trim()
+                          : 'example@gmail.com';
+                      return Text(
+                        emailText,
+                        style: TextStyle(
+                          color: AppColors.mutedForeground,
+                          fontSize: AppSizes.fontMd,
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),

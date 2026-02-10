@@ -5,6 +5,7 @@ import 'package:sampan/data/service/local_store.dart';
 import 'package:sampan/data/models/user_profile.dart';
 import '../../data/service/utils.dart';
 import '../../routes/app_routes.dart';
+import '../../controller/profile_controller.dart';
 import '../login/login_binding.dart';
 import '../login/login_view.dart';
 
@@ -22,9 +23,6 @@ class SignupController extends GetxController {
   final cityController = TextEditingController();
   final stateController = TextEditingController();
   final zipCodeController = TextEditingController();
-  final cardNumberController = TextEditingController();
-  final cardExpiryController = TextEditingController();
-  final cardCVVController = TextEditingController();
 
   // -----------------------------------------------------
   // 🔑 FORM KEY & STATE
@@ -69,7 +67,7 @@ class SignupController extends GetxController {
         "${streetController.text.trim()}, ${cityController.text.trim()}, ${stateController.text.trim()}, ${zipCodeController.text.trim()}";
 
     final requestedBody = {
-      "api_token": "af547bb45f372a7b1171ba7a304fcd84ab319852",
+      "api_token": ApiConfig.apiToken,
       "customerName": fullName,
       "customerTel": phoneController.text.trim(),
       "customerEmail": emailController.text.trim(),
@@ -88,21 +86,40 @@ class SignupController extends GetxController {
 
       if (response.isSuccess) {
         final body = response.body ?? {};
+        final customerId = body['CustomerID']?.toString() ?? '';
+        final email = emailController.text.trim();
+        final phoneStr = phoneController.text.trim();
+        // api_token is same for every user; customerID is per-user and used for all API calls
+        await LocalStore.instance.saveSession(
+          customerId: customerId,
+          apiToken: ApiConfig.apiToken,
+          name: fullName,
+          email: email,
+          phone: phoneStr,
+          address: addressLine,
+          instructions: '',
+        );
 
-        // ✅ Automatically save CID / CustomerID
         await LocalStore.instance.saveCustomerIdFromResponse(body);
-
-        // ✅ Save user profile
         final profile = UserProfile(
           fullName: fullName,
-          email: emailController.text.trim(),
-          phone: phoneController.text.trim(),
+          email: email,
+          phone: phoneStr,
           address: addressLine,
           name: fullName,
         );
-
         await LocalStore.instance.saveUserProfile(profile);
         await LocalStore.instance.setLoggedIn(true);
+
+        final session = Get.find<ProfileController>();
+        await session.setSession(
+          name: fullName,
+          email: email,
+          customerId: customerId,
+          apiToken: ApiConfig.apiToken,
+          phone: phoneStr,
+          address: addressLine,
+        );
 
         _ok('Account created successfully!');
         _clearForm();
@@ -141,9 +158,6 @@ class SignupController extends GetxController {
     cityController.clear();
     stateController.clear();
     zipCodeController.clear();
-    cardNumberController.clear();
-    cardExpiryController.clear();
-    cardCVVController.clear();
   }
 
   // -----------------------------------------------------
@@ -169,9 +183,6 @@ class SignupController extends GetxController {
     cityController.dispose();
     stateController.dispose();
     zipCodeController.dispose();
-    cardNumberController.dispose();
-    cardExpiryController.dispose();
-    cardCVVController.dispose();
     super.onClose();
   }
 

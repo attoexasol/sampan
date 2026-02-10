@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../constants/colors.dart';
+import '../controller/order_history_controller.dart';
+import '../data/models/api_order_model.dart';
+
+const String _receiptBase = 'https://cleancloudapp.com/';
 
 class OrderHistoryDialog extends StatefulWidget {
   const OrderHistoryDialog({Key? key}) : super(key: key);
@@ -10,151 +16,25 @@ class OrderHistoryDialog extends StatefulWidget {
 }
 
 class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
-  // Track which orders are expanded
-  final Set<String> _expandedOrders = {};
+  late final OrderHistoryController _ctrl;
 
-  // Mock order data
-  final List<Map<String, dynamic>> _orders = [
-    {
-      'id': 'ORD-2024-003',
-      'date': 'March 28, 2024',
-      'status': 'Completed',
-      'total': 156.75,
-      'summary': {
-        'laundry': {'lbs': 24, 'items': 0},
-        'dryCleaning': {'items': 3},
-        'steaming': {'items': 1},
-        'alterations': {'items': 1},
-        'shoeCare': {'pairs': 1},
-      },
-      'services': {
-        'laundry': [
-          {'name': 'Total Pounds Washed', 'value': '24 lbs', 'price': 54.00},
-        ],
-        'dryCleaning': [
-          {'name': 'Essential Shirts x 2', 'price': 14.00},
-          {'name': 'Two-Piece Suit x 1', 'price': 34.00},
-        ],
-        'steaming': [
-          {'name': 'Casual Dress x 1', 'price': 8.00},
-        ],
-        'alterations': [
-          {'name': 'Hem Pants x 1', 'price': 21.75},
-        ],
-        'shoeCare': [
-          {'name': 'Shoe Renew Standard x 1', 'price': 30.00},
-        ],
-      },
-      'environmental': {
-        'water': 57.6,
-        'detergent': 6.0,
-        'gas': 0.48,
-        'energy': 2.4,
-        'co2': 3.26,
-      },
-    },
-    {
-      'id': 'ORD-2024-002',
-      'date': 'March 21, 2024',
-      'status': 'Completed',
-      'total': 89.50,
-      'summary': {
-        'laundry': {'lbs': 20, 'items': 0},
-        'dryCleaning': {'items': 3},
-      },
-      'services': {
-        'laundry': [
-          {'name': 'Total Pounds Washed', 'value': '20 lbs', 'price': 45.00},
-        ],
-        'dryCleaning': [
-          {'name': 'Essential Shirts x 3', 'price': 21.00},
-          {'name': 'Blazer x 1', 'price': 23.50},
-        ],
-      },
-      'environmental': {
-        'water': 48.0,
-        'detergent': 5.0,
-        'gas': 0.40,
-        'energy': 2.0,
-        'co2': 2.72,
-      },
-    },
-    {
-      'id': 'ORD-2024-001',
-      'date': 'March 14, 2024',
-      'status': 'Completed',
-      'total': 127.25,
-      'summary': {
-        'laundry': {'lbs': 26, 'items': 0},
-        'dryCleaning': {'items': 1},
-        'steaming': {'items': 3},
-        'alterations': {'items': 1},
-      },
-      'services': {
-        'laundry': [
-          {'name': 'Total Pounds Washed', 'value': '26 lbs', 'price': 58.50},
-        ],
-        'dryCleaning': [
-          {'name': 'Wool Coat x 1', 'price': 42.00},
-        ],
-        'steaming': [
-          {'name': 'Formal Dress x 1', 'price': 12.00},
-          {'name': 'Blouse x 2', 'price': 10.00},
-        ],
-        'alterations': [
-          {'name': 'Take In Jacket x 1', 'price': 5.75},
-        ],
-      },
-      'environmental': {
-        'water': 62.4,
-        'detergent': 6.5,
-        'gas': 0.52,
-        'energy': 2.6,
-        'co2': 3.54,
-      },
-    },
-  ];
-
-  // Calculate total environmental impact
-  Map<String, double> get _totalEnvironmentalImpact {
-    double totalWater = 0;
-    double totalDetergent = 0;
-    double totalGas = 0;
-    double totalEnergy = 0;
-    double totalCo2 = 0;
-
-    for (var order in _orders) {
-      final env = order['environmental'] as Map<String, dynamic>;
-      totalWater += env['water'] as double;
-      totalDetergent += env['detergent'] as double;
-      totalGas += env['gas'] as double;
-      totalEnergy += env['energy'] as double;
-      totalCo2 += env['co2'] as double;
+  @override
+  void initState() {
+    super.initState();
+    if (!Get.isRegistered<OrderHistoryController>()) {
+      Get.put(OrderHistoryController(), permanent: false);
     }
-
-    return {
-      'water': totalWater,
-      'detergent': totalDetergent,
-      'gas': totalGas,
-      'energy': totalEnergy,
-      'co2': totalCo2,
-    };
+    _ctrl = Get.find<OrderHistoryController>();
+    _ctrl.fetchOrders();
   }
 
-  void _toggleOrder(String orderId) {
-    setState(() {
-      if (_expandedOrders.contains(orderId)) {
-        _expandedOrders.remove(orderId);
-      } else {
-        _expandedOrders.add(orderId);
-      }
-    });
+  static String _formatDate(DateTime? d) {
+    if (d == null) return '—';
+    return DateFormat.yMMMMd().format(d);
   }
 
   @override
   Widget build(BuildContext context) {
-    final totalImpact = _totalEnvironmentalImpact;
-
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(
@@ -221,20 +101,31 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
 
             // Order List
             Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    // Order Cards
-                    ..._orders.map((order) => _buildOrderCard(order)),
-                    const SizedBox(height: 20),
-
-                    // Total Environmental Impact
-                    _buildTotalEnvironmentalImpact(totalImpact),
-                    const SizedBox(height: 20),
-                  ],
-                ),
-              ),
+              child: Obx(() {
+                if (_ctrl.isLoading.value) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+                final totalImpact = _ctrl.totalEnvironmentalImpact;
+                final orderList = _ctrl.orders;
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      ...orderList.asMap().entries.map(
+                            (e) => _buildOrderCard(e.value, e.key),
+                          ),
+                      const SizedBox(height: 20),
+                      _buildTotalEnvironmentalImpact(totalImpact),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                );
+              }),
             ),
 
             // Close Button
@@ -276,12 +167,13 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
     );
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order) {
-    final orderId = order['id'] as String;
-    final isExpanded = _expandedOrders.contains(orderId);
-    final summary = order['summary'] as Map<String, dynamic>;
-    final services = order['services'] as Map<String, dynamic>;
-    final environmental = order['environmental'] as Map<String, dynamic>;
+  Widget _buildOrderCard(ApiOrder order, int index) {
+    final orderId = order.id;
+    final isExpanded = _ctrl.isExpanded(orderId);
+    final orderNumber = _ctrl.orderNumberFor(order, index);
+    final environmental = _ctrl.environmentalForOrder(order);
+    final servicesMap = _ctrl.getServicesForOrder(orderId);
+    final hasDetails = servicesMap.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -295,9 +187,8 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
       ),
       child: Column(
         children: [
-          // Order Summary (Always Visible)
           InkWell(
-            onTap: () => _toggleOrder(orderId),
+            onTap: () => _ctrl.toggleExpanded(orderId),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -308,7 +199,7 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          orderId,
+                          orderNumber,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -317,7 +208,7 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          order['date'] as String,
+                          _formatDate(order.displayDate),
                           style: TextStyle(
                             fontSize: 14,
                             color: AppColors.mutedForeground,
@@ -336,7 +227,7 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          order['status'] as String,
+                          order.statusLabel,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -346,7 +237,7 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '\$${(order['total'] as double).toStringAsFixed(2)}',
+                        '\$${order.total.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -365,28 +256,20 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
             ),
           ),
 
-          // Summary Icons Row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Wrap(
               spacing: 12,
               runSpacing: 8,
               children: [
-                if (summary['laundry'] != null)
-                  _buildSummaryIcon(Icons.local_laundry_service, '${summary['laundry']['lbs']} lbs'),
-                if (summary['dryCleaning'] != null)
-                  _buildSummaryIcon(Icons.dry_cleaning, '${summary['dryCleaning']['items']} items'),
-                if (summary['steaming'] != null)
-                  _buildSummaryIcon(Icons.air, '${summary['steaming']['items']} items'),
-                if (summary['alterations'] != null)
-                  _buildSummaryIcon(Icons.content_cut, '${summary['alterations']['items']} items'),
-                if (summary['shoeCare'] != null)
-                  _buildSummaryIcon(Icons.shopping_bag, '${summary['shoeCare']['pairs']} pairs'),
+                if (order.weight > 0)
+                  _buildSummaryIcon(Icons.local_laundry_service, '${order.weight.toStringAsFixed(0)} lbs'),
+                if (order.pieces > 0)
+                  _buildSummaryIcon(Icons.checkroom, '${order.pieces} items'),
               ],
             ),
           ),
 
-          // Expanded Content
           if (isExpanded) ...[
             Divider(color: AppColors.border, height: 1),
             Padding(
@@ -394,27 +277,27 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Services Breakdown
-                  ..._buildServicesSection(services),
-                  const SizedBox(height: 16),
-
-                  // Environmental Contribution
+                  if (hasDetails)
+                    ..._buildServicesSectionFromMap(servicesMap),
+                  if (!hasDetails)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 28, top: 4, bottom: 16),
+                      child: Text(
+                        'Order details unavailable',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                  if (hasDetails) const SizedBox(height: 16),
                   _buildEnvironmentalContribution(environmental),
                   const SizedBox(height: 16),
-
-                  // Action Buttons
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () {
-                            Get.snackbar(
-                              'Receipt',
-                              'Receipt for ${orderId}',
-                              backgroundColor: AppColors.primary,
-                              colorText: Colors.white,
-                            );
-                          },
+                          onPressed: () => _openReceipt(order),
                           icon: const Icon(Icons.receipt),
                           label: const Text('View Receipt'),
                           style: OutlinedButton.styleFrom(
@@ -432,9 +315,10 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
                           onPressed: () {
                             Get.snackbar(
                               'Reorder',
-                              'Reorder ${orderId}',
+                              'Reorder coming soon',
                               backgroundColor: AppColors.primary,
                               colorText: Colors.white,
+                              snackPosition: SnackPosition.BOTTOM,
                             );
                           },
                           icon: const Icon(Icons.refresh, color: Colors.white),
@@ -459,6 +343,33 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
     );
   }
 
+  Future<void> _openReceipt(ApiOrder order) async {
+    final link = order.receiptLink?.trim();
+    if (link == null || link.isEmpty) {
+      Get.snackbar(
+        'Receipt',
+        'Receipt not available',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    final url = _receiptBase + link;
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      Get.snackbar(
+        'Error',
+        'Could not open receipt',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   Widget _buildSummaryIcon(IconData icon, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -479,49 +390,83 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
     );
   }
 
+  List<Widget> _buildServicesSectionFromMap(
+      Map<String, List<Map<String, dynamic>>> services) {
+    final List<Widget> widgets = [];
+    const categories = [
+      ('laundry', 'Laundry Services', Icons.local_laundry_service),
+      ('dryCleaning', 'Dry Cleaning', Icons.dry_cleaning),
+      ('steaming', 'Steaming Services', Icons.air),
+      ('alterations', 'Alterations', Icons.content_cut),
+      ('shoeCare', 'Shoe Care', Icons.shopping_bag),
+    ];
+    for (final c in categories) {
+      final items = services[c.$1];
+      if (items != null && items.isNotEmpty) {
+        widgets.add(_buildServiceCategory(c.$2, c.$3, items));
+      }
+    }
+    return widgets;
+  }
+
   List<Widget> _buildServicesSection(Map<String, dynamic> services) {
     final List<Widget> widgets = [];
-
     if (services['laundry'] != null) {
       widgets.add(_buildServiceCategory(
         'Laundry Services',
         Icons.local_laundry_service,
-        services['laundry'] as List,
+        List<Map<String, dynamic>>.from(
+          (services['laundry'] as List).map((e) => Map<String, dynamic>.from(e)),
+        ),
       ));
     }
     if (services['dryCleaning'] != null) {
       widgets.add(_buildServiceCategory(
         'Dry Cleaning',
         Icons.dry_cleaning,
-        services['dryCleaning'] as List,
+        List<Map<String, dynamic>>.from(
+          (services['dryCleaning'] as List).map((e) => Map<String, dynamic>.from(e)),
+        ),
       ));
     }
     if (services['steaming'] != null) {
       widgets.add(_buildServiceCategory(
         'Steaming Services',
         Icons.air,
-        services['steaming'] as List,
+        List<Map<String, dynamic>>.from(
+          (services['steaming'] as List).map((e) => Map<String, dynamic>.from(e)),
+        ),
       ));
     }
     if (services['alterations'] != null) {
       widgets.add(_buildServiceCategory(
         'Alterations',
         Icons.content_cut,
-        services['alterations'] as List,
+        List<Map<String, dynamic>>.from(
+          (services['alterations'] as List).map((e) => Map<String, dynamic>.from(e)),
+        ),
       ));
     }
     if (services['shoeCare'] != null) {
       widgets.add(_buildServiceCategory(
         'Shoe Care',
         Icons.shopping_bag,
-        services['shoeCare'] as List,
+        List<Map<String, dynamic>>.from(
+          (services['shoeCare'] as List).map((e) => Map<String, dynamic>.from(e)),
+        ),
       ));
     }
-
     return widgets;
   }
 
-  Widget _buildServiceCategory(String title, IconData icon, List<dynamic> items) {
+  Widget _buildServiceCategory(
+      String title, IconData icon, List<Map<String, dynamic>> items) {
+    double priceFrom(dynamic v) {
+      if (v == null) return 0.0;
+      if (v is num) return v.toDouble();
+      return double.tryParse(v.toString()) ?? 0.0;
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -542,51 +487,62 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
             ],
           ),
           const SizedBox(height: 8),
-          ...items.map((item) => Padding(
-                padding: const EdgeInsets.only(left: 28, top: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
+          ...items.map((item) {
+            final name = item['name']?.toString() ?? '—';
+            final value = item['value']?.toString();
+            final price = priceFrom(item['price']);
+            return Padding(
+              padding: const EdgeInsets.only(left: 28, top: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    flex: 2,
+                    child: Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.foreground,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (value != null && value.isNotEmpty)
                     Flexible(
-                      flex: 2,
                       child: Text(
-                        item['name'] as String,
+                        value,
                         style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.foreground,
+                          color: AppColors.mutedForeground,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (item['value'] != null)
-                      Flexible(
-                        child: Text(
-                          item['value'] as String,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.mutedForeground,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '\$${(item['price'] as double).toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.foreground,
-                      ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '\$${price.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.foreground,
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildEnvironmentalContribution(Map<String, dynamic> environmental) {
+  Widget _buildEnvironmentalContribution(Map<String, double> environmental) {
+    final w = environmental['water'] ?? 0.0;
+    final d = environmental['detergent'] ?? 0.0;
+    final g = environmental['gas'] ?? 0.0;
+    final e = environmental['energy'] ?? 0.0;
+    final c = environmental['co2'] ?? 0.0;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -623,7 +579,7 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
                   Icons.water_drop,
                   Colors.blue,
                   'Water Saved',
-                  '${environmental['water'].toStringAsFixed(1)} gal',
+                  '${w.toStringAsFixed(1)} gal',
                 ),
               ),
               const SizedBox(width: 8),
@@ -632,7 +588,7 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
                   Icons.cleaning_services,
                   const Color(0xFFEC4899),
                   'Detergent Saved',
-                  '${environmental['detergent'].toStringAsFixed(1)} fl oz',
+                  '${d.toStringAsFixed(1)} fl oz',
                 ),
               ),
             ],
@@ -645,7 +601,7 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
                   Icons.local_fire_department,
                   Colors.orange,
                   'Gas Saved',
-                  '${environmental['gas'].toStringAsFixed(2)} therms',
+                  '${g.toStringAsFixed(2)} therms',
                 ),
               ),
               const SizedBox(width: 8),
@@ -654,7 +610,7 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
                   Icons.bolt,
                   Colors.amber,
                   'Energy Saved',
-                  '${environmental['energy'].toStringAsFixed(1)} kWh',
+                  '${e.toStringAsFixed(1)} kWh',
                 ),
               ),
             ],
@@ -672,7 +628,7 @@ class _OrderHistoryDialogState extends State<OrderHistoryDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'CO₂ Avoided: ${environmental['co2'].toStringAsFixed(2)} kg',
+                    'CO₂ Avoided: ${c.toStringAsFixed(2)} kg',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
