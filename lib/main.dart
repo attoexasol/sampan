@@ -14,9 +14,12 @@ import 'screens/home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Stripe
   // Stripe.publishableKey = "pk_live_51QswX3FSsSDfUKXIQTZK5gnaXKza6kJqL8uN6b1S5Q4QvWD6CioWBFNdBGskXbB5jEO2p52o2Rvfryotbah29rGT00ycgSwYPf";
   Stripe.publishableKey = "pk_test_51PI6AGJ7hx1gScqWJKV3RDwIS2yqfr8aNSZCPE5Z5k7GWtpLrIgxqzIS5cNSK7U5RX89L0WerQY1SwHO8Llu2EX50014wZV6Kj";
- //  await Stripe.instance.applySettings();
+  await Stripe.instance.applySettings();
+  
   Get.put(ProductsController(), permanent: true);
   Get.put(ProfileController(), permanent: true);
   SystemChrome.setSystemUIOverlayStyle(
