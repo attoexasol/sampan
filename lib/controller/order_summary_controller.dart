@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../data/service/express_delivery_service.dart';
 
 class SummaryItem {
   final String key;          // unique id (e.g., 'elite', 'sub', 'payg', 'pillow')
@@ -43,6 +44,10 @@ class OrderSummaryController extends GetxController {
 
   /// GST / tax
   final double gstRate = 0.05;
+
+  /// Express delivery state (automatically set based on schedule)
+  final RxBool isExpressDelivery = false.obs;
+  final RxDouble expressDurationHours = 0.0.obs;
 
   bool get hasAnySelection => items.isNotEmpty;
 
@@ -108,9 +113,39 @@ class OrderSummaryController extends GetxController {
 
   double get deliveryFee => subTotal >= 80 ? 0.0 : 10.99;
 
+  /// Express fee: 5% of subtotal if express delivery
+  double get expressFee => ExpressDeliveryService.instance.calculateExpressFee(
+    subTotal, 
+    isExpressDelivery.value,
+  );
+
   double get tax => subTotal * gstRate;
 
-  double get grandTotal => subTotal + deliveryFee + tax;
+  double get grandTotal => subTotal + deliveryFee + expressFee + tax;
+
+  /// Set express delivery state based on schedule
+  void setExpressDelivery({
+    required DateTime? pickupDate,
+    required String? pickupTimeSlot,
+    required DateTime? deliveryDate,
+    required String? deliveryTimeSlot,
+  }) {
+    final result = ExpressDeliveryService.instance.checkExpressDelivery(
+      pickupDate: pickupDate,
+      pickupTimeSlot: pickupTimeSlot,
+      deliveryDate: deliveryDate,
+      deliveryTimeSlot: deliveryTimeSlot,
+    );
+    
+    isExpressDelivery.value = result.isExpress;
+    expressDurationHours.value = result.durationHours ?? 0.0;
+  }
+
+  /// Reset express delivery state
+  void resetExpressDelivery() {
+    isExpressDelivery.value = false;
+    expressDurationHours.value = 0.0;
+  }
 
   /// Get snapshot for navigation
   Map<String, dynamic> snapshot() => {
@@ -118,9 +153,12 @@ class OrderSummaryController extends GetxController {
     'totals': {
       'subTotal': subTotal,
       'deliveryFee': deliveryFee,
+      'expressFee': expressFee,
       'tax': tax,
       'grandTotal': grandTotal,
       'gstRate': gstRate,
+      'isExpressDelivery': isExpressDelivery.value,
+      'expressDurationHours': expressDurationHours.value,
     },
   };
 

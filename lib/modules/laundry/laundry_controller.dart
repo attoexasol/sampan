@@ -21,8 +21,8 @@ class LaundryController extends GetxController {
   final isSubscriptionSelected = false.obs;
   final isPayAsYouGoSelected = false.obs;
 
-  // Express service
-  final isExpressServiceSelected = false.obs;
+  // NOTE: Express service is now automatically detected based on pickup/delivery schedule
+  // See ExpressDeliveryService for automatic express detection (delivery within 24h of pickup)
 
   // Special instructions
   final specialInstructions = ''.obs;
@@ -34,7 +34,8 @@ class LaundryController extends GetxController {
   static const double subscriptionPrice = 18.0;
   static const double payAsYouGoPrice = 2.25; // per pound
   static const double payAsYouGoMinCharge = 45.0;
-  static const double expressServicePrice = 5.0;
+  // NOTE: Express delivery fee is now 5% of subtotal, calculated automatically
+  // when delivery is scheduled within 24 hours of pickup
 
   @override
   void onInit() {
@@ -123,12 +124,6 @@ class LaundryController extends GetxController {
     _updateOrderSummary();
   }
 
-  /// Toggle Express Service
-  void toggleExpressService() {
-    isExpressServiceSelected.value = !isExpressServiceSelected.value;
-    _updateOrderSummary();
-  }
-
   /// Update quantity for a bulky item
   void updateBulkyItemQuantity(Product product, int quantity) {
     if (quantity <= 0) {
@@ -209,18 +204,9 @@ class LaundryController extends GetxController {
       orderCtrl.items.remove('pay_as_you_go');
     }
 
-    // Express Service
-    if (isExpressServiceSelected.value) {
-      orderCtrl.updateItem(
-        key: 'express_service',
-        title: 'Express Service',
-        subtitle: '24-hour turnaround',
-        price: expressServicePrice,
-        qty: 1,
-      );
-    } else {
-      orderCtrl.items.remove('express_service');
-    }
+    // NOTE: Express delivery is now automatically detected based on schedule
+    // Express fee (5% of subtotal) is applied when delivery is within 24h of pickup
+    // See: ScheduleController._updateExpressDeliveryState() and ExpressDeliveryService
   }
 
   /// Check if user has any selection

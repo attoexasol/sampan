@@ -341,6 +341,8 @@ import '../../data/models/order_history_model.dart';
 import '../../data/service/network_caller.dart';
 import '../../data/service/local_store.dart';
 import '../../data/service/utils.dart';
+import '../../data/service/express_delivery_service.dart';
+import '../../controller/order_summary_controller.dart';
 
 
 class ScheduleController extends GetxController {
@@ -359,6 +361,12 @@ class ScheduleController extends GetxController {
   final selectedDeliveryTimeSlot = ''.obs;
   final isLoading = false.obs;
   final serviceType = ''.obs;
+
+  // EXPRESS DELIVERY STATE
+  final isExpressDelivery = false.obs;
+  final isValidDeliveryGap = true.obs;
+  final deliveryDurationHours = Rx<double?>(null);
+  final expressDeliveryMessage = ''.obs;
 
   // ORDER SUMMARY DATA
   final orderSummaryData = <String, dynamic>{}.obs;
@@ -420,7 +428,31 @@ class ScheduleController extends GetxController {
 
   bool get hasOrderSummary => orderItems.isNotEmpty;
 
-  double get grandTotal => (orderTotals['grandTotal'] as num?)?.toDouble() ?? 0.0;
+  /// Grand total including express fee if applicable
+  double get grandTotal {
+    double baseTotal = (orderTotals['grandTotal'] as num?)?.toDouble() ?? 0.0;
+    
+    // If express delivery, recalculate with express fee
+    if (isExpressDelivery.value) {
+      final subtotal = (orderTotals['subTotal'] as num?)?.toDouble() ?? 0.0;
+      final deliveryFee = (orderTotals['deliveryFee'] as num?)?.toDouble() ?? 0.0;
+      final tax = (orderTotals['tax'] as num?)?.toDouble() ?? 0.0;
+      final expFee = expressFee;
+      
+      return subtotal + deliveryFee + expFee + tax;
+    }
+    
+    return baseTotal;
+  }
+
+  /// Get order totals with express fee included
+  Map<String, dynamic> get orderTotalsWithExpress {
+    final totals = Map<String, dynamic>.from(orderTotals);
+    totals['expressFee'] = expressFee;
+    totals['isExpressDelivery'] = isExpressDelivery.value;
+    totals['grandTotal'] = grandTotal;
+    return totals;
+  }
 
   @override
   void onClose() {
@@ -431,33 +463,90 @@ class ScheduleController extends GetxController {
     super.onClose();
   }
 
+  /// Get minimum turnaround days for the service type.
+  /// Note: This is now 0 for all services to allow express delivery (under 24h).
+  /// The actual minimum gap (4 hours) is enforced at the time slot level.
   int getTurnaroundDays() {
-    if (serviceType.value.toLowerCase().contains('rush')) return 1;
-    if (serviceType.value.toLowerCase().contains('dry-cleaning')) return 3;
-    if (serviceType.value.toLowerCase().contains('alterations')) return 5;
-    return 2;
+    // Allow same-day delivery for all services
+    // The 4-hour minimum gap is enforced by isDeliveryTimeSlotAvailable()
+    return 0;
   }
 
+  /// Get the minimum delivery date (same as pickup date to allow express delivery)
   DateTime? getMinDeliveryDate() {
     if (selectedPickupDate.value == null) return null;
-    return selectedPickupDate.value!.add(Duration(days: getTurnaroundDays()));
+    // Allow same-day delivery - the 4-hour gap is validated at time slot level
+    return selectedPickupDate.value!;
   }
 
   bool isDeliveryTimeSlotAvailable(String timeSlot) {
     if (selectedPickupDate.value == null || selectedDeliveryDate.value == null) {
       return true;
     }
-    final minDeliveryDate = getMinDeliveryDate();
-    if (minDeliveryDate == null) return true;
-
-    if (DateFormat('yyyy-MM-dd').format(selectedDeliveryDate.value!) ==
-        DateFormat('yyyy-MM-dd').format(minDeliveryDate)) {
-      final pickupSlotIndex = timeSlots.indexOf(selectedPickupTimeSlot.value);
-      final deliverySlotIndex = timeSlots.indexOf(timeSlot);
-      return deliverySlotIndex > pickupSlotIndex;
-    }
-    return true;
+    
+    // Check minimum 4-hour gap using ExpressDeliveryService
+    final result = ExpressDeliveryService.instance.checkExpressDelivery(
+      pickupDate: selectedPickupDate.value,
+      pickupTimeSlot: selectedPickupTimeSlot.value,
+      deliveryDate: selectedDeliveryDate.value,
+      deliveryTimeSlot: timeSlot,
+    );
+    
+    return result.isValidGap;
   }
+
+  /// Update express delivery state based on current selection
+  void _updateExpressDeliveryState() {
+    final result = ExpressDeliveryService.instance.checkExpressDelivery(
+      pickupDate: selectedPickupDate.value,
+      pickupTimeSlot: selectedPickupTimeSlot.value,
+      deliveryDate: selectedDeliveryDate.value,
+      deliveryTimeSlot: selectedDeliveryTimeSlot.value,
+    );
+    
+    isExpressDelivery.value = result.isExpress;
+    isValidDeliveryGap.value = result.isValidGap;
+    deliveryDurationHours.value = result.durationHours;
+    expressDeliveryMessage.value = result.message ?? '';
+    
+    // Update OrderSummaryController if registered
+    if (Get.isRegistered<OrderSummaryController>()) {
+      try {
+        final orderCtrl = Get.find<OrderSummaryController>();
+        orderCtrl.setExpressDelivery(
+          pickupDate: selectedPickupDate.value,
+          pickupTimeSlot: selectedPickupTimeSlot.value,
+          deliveryDate: selectedDeliveryDate.value,
+          deliveryTimeSlot: selectedDeliveryTimeSlot.value,
+        );
+      } catch (e) {
+        debugPrint('Warning: Could not update OrderSummaryController express state: $e');
+      }
+    }
+    
+    debugPrint('📦 Express Delivery: isExpress=${result.isExpress}, '
+        'isValidGap=${result.isValidGap}, '
+        'duration=${result.durationHours?.toStringAsFixed(1)}h');
+  }
+
+  /// Get express fee based on current order
+  double get expressFee {
+    if (!isExpressDelivery.value) return 0.0;
+    
+    // Get subtotal from orderTotals or OrderSummaryController
+    double subtotal = (orderTotals['subTotal'] as num?)?.toDouble() ?? 0.0;
+    
+    if (subtotal == 0 && Get.isRegistered<OrderSummaryController>()) {
+      try {
+        subtotal = Get.find<OrderSummaryController>().subTotal;
+      } catch (_) {}
+    }
+    
+    return ExpressDeliveryService.instance.calculateExpressFee(subtotal, true);
+  }
+
+  /// Check if checkout can proceed (valid gap)
+  bool get canProceedToCheckout => isValidDeliveryGap.value;
 
   Future<void> selectPickupDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -477,7 +566,38 @@ class ScheduleController extends GetxController {
           selectedDeliveryTimeSlot.value = '';
         }
       }
+      _updateExpressDeliveryState();
     }
+  }
+
+  /// Set pickup time slot and update express state
+  void setPickupTimeSlot(String slot) {
+    selectedPickupTimeSlot.value = slot;
+    
+    // Check if current delivery time slot is still valid
+    if (selectedDeliveryTimeSlot.value.isNotEmpty &&
+        !isDeliveryTimeSlotAvailable(selectedDeliveryTimeSlot.value)) {
+      selectedDeliveryTimeSlot.value = '';
+    }
+    
+    _updateExpressDeliveryState();
+  }
+
+  /// Set delivery time slot and update express state
+  void setDeliveryTimeSlot(String slot) {
+    if (!isDeliveryTimeSlotAvailable(slot)) {
+      Get.snackbar(
+        'Invalid Selection',
+        'Minimum ${ExpressDeliveryService.minimumGapHours} hours required between pickup and delivery',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    
+    selectedDeliveryTimeSlot.value = slot;
+    _updateExpressDeliveryState();
   }
 
   Future<void> selectDeliveryDate(BuildContext context) async {
@@ -501,6 +621,7 @@ class ScheduleController extends GetxController {
           !isDeliveryTimeSlotAvailable(selectedDeliveryTimeSlot.value)) {
         selectedDeliveryTimeSlot.value = '';
       }
+      _updateExpressDeliveryState();
     }
   }
 

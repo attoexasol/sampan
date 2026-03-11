@@ -17,6 +17,7 @@ import 'schedule_controller.dart';
 import '../../data/service/network_caller.dart';
 import '../../data/service/local_store.dart';
 import '../../data/service/utils.dart';
+import '../../data/service/express_delivery_service.dart';
 
 /// ✅ UPDATED: OrderSummaryCard now shows pickup/delivery date and time
 class ScheduleView extends GetView<ScheduleController> {
@@ -244,7 +245,7 @@ class ScheduleView extends GetView<ScheduleController> {
                         value: slot,
                         groupValue: controller.selectedPickupTimeSlot.value,
                         onChanged: (v) {
-                          controller.selectedPickupTimeSlot.value = v ?? '';
+                          controller.setPickupTimeSlot(v ?? '');
                         },
                         contentPadding: EdgeInsets.zero,
                       dense: true,
@@ -296,48 +297,131 @@ class ScheduleView extends GetView<ScheduleController> {
               ),
               const SizedBox(height: 20),
 
-              // Delivery Time Slots
-              Column(
+              // Delivery Time Slots - wrapped in Obx to ensure reactive rebuilds
+              Obx(() {
+                // Force reactive dependency on all relevant values
+                final pickupDate = controller.selectedPickupDate.value;
+                final pickupSlot = controller.selectedPickupTimeSlot.value;
+                final deliveryDate = controller.selectedDeliveryDate.value;
+                final selectedDeliverySlot = controller.selectedDeliveryTimeSlot.value;
+                
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Delivery Time Slot *',
                       style: TextStyle(
                         fontSize: 14,
-                          fontWeight: FontWeight.w500),
+                        fontWeight: FontWeight.w500),
                     ),
-                  const SizedBox(height: 12),
-                    ...controller.timeSlots.map(
-                          (slot) => Obx(() {
-                        final isAvailable =
-                        controller.isDeliveryTimeSlotAvailable(slot);
-                        return RadioListTile<String>(
-                          title: Text(
-                            slot,
-                            style: TextStyle(
-                            fontSize: 14,
-                              color: isAvailable ? Colors.black : Colors.grey,
+                    const SizedBox(height: 12),
+                    ...controller.timeSlots.map((slot) {
+                      final isAvailable = controller.isDeliveryTimeSlotAvailable(slot);
+                      final isSelected = selectedDeliverySlot == slot;
+                      
+                      // Check if this slot would be express (turnaround < 24 hours)
+                      bool wouldBeExpress = false;
+                      if (isAvailable && 
+                          pickupDate != null && 
+                          deliveryDate != null && 
+                          pickupSlot.isNotEmpty) {
+                        final result = ExpressDeliveryService.instance.checkExpressDelivery(
+                          pickupDate: pickupDate,
+                          pickupTimeSlot: pickupSlot,
+                          deliveryDate: deliveryDate,
+                          deliveryTimeSlot: slot,
+                        );
+                        wouldBeExpress = result.isExpress;
+                      }
+                      
+                      return RadioListTile<String>(
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Text(
+                                    slot,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: isAvailable 
+                                          ? (isSelected ? AppColors.primary : Colors.black)
+                                          : Colors.grey,
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                    ),
+                                  ),
+                                  // Show lightning icon for express slots (< 24h turnaround)
+                                  if (isAvailable && wouldBeExpress) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isSelected 
+                                            ? Colors.orange.shade200 
+                                            : Colors.orange.shade50,
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: isSelected 
+                                              ? Colors.orange.shade600 
+                                              : Colors.orange.shade300,
+                                          width: isSelected ? 1.5 : 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.bolt,
+                                            size: 14,
+                                            color: isSelected 
+                                                ? Colors.orange.shade800 
+                                                : Colors.orange.shade600,
+                                          ),
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            'Express',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: isSelected 
+                                                  ? Colors.orange.shade800 
+                                                  : Colors.orange.shade600,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
-                          ),
-                          value: slot,
-                          groupValue:
-                          controller.selectedDeliveryTimeSlot.value,
-                          onChanged: isAvailable
-                              ? (v) {
-                            controller.selectedDeliveryTimeSlot.value =
-                                v ?? '';
-                          }
-                              : null,
-                          contentPadding: EdgeInsets.zero,
+                            if (!isAvailable)
+                              Text(
+                                '(min 4h gap)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.red.shade400,
+                                ),
+                              ),
+                          ],
+                        ),
+                        value: slot,
+                        groupValue: selectedDeliverySlot,
+                        onChanged: isAvailable
+                            ? (v) {
+                          controller.setDeliveryTimeSlot(v ?? '');
+                        }
+                            : null,
+                        contentPadding: EdgeInsets.zero,
                         dense: true,
                         visualDensity: VisualDensity.compact,
                         activeColor: AppColors.primary,
                         selectedTileColor: Colors.transparent,
-                        );
-                      }),
-                    ),
+                      );
+                    }),
                   ],
-              ),
+                );
+              }),
               const SizedBox(height: 16),
 
               // Turnaround Note
@@ -348,6 +432,88 @@ class ScheduleView extends GetView<ScheduleController> {
                         color: AppColors.mutedForeground,
                       ),
               ),
+              
+              // Express Delivery Indicator
+              Obx(() {
+                if (controller.selectedDeliveryTimeSlot.value.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                
+                final isExpress = controller.isExpressDelivery.value;
+                final duration = controller.deliveryDurationHours.value;
+                
+                if (isExpress && duration != null) {
+                  return Container(
+                    margin: const EdgeInsets.only(top: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.orange.shade50,
+                          Colors.amber.shade50,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.shade400, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.orange.withOpacity(0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.bolt,
+                            color: Colors.orange.shade700,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    '⚡ Express Delivery',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange.shade800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${duration.toStringAsFixed(0)}h turnaround • 5% express fee applies',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                return const SizedBox.shrink();
+              }),
             ],
           ),
         ),
@@ -483,10 +649,11 @@ class ScheduleView extends GetView<ScheduleController> {
             items: items,
             subTotal: (totals['subTotal'] as num?)?.toDouble() ?? 0.0,
             deliveryFee: (totals['deliveryFee'] as num?)?.toDouble() ?? 0.0,
+            expressFee: controller.expressFee,
+            isExpressDelivery: controller.isExpressDelivery.value,
             tax: (totals['tax'] as num?)?.toDouble() ?? 0.0,
-            grandTotal: (totals['grandTotal'] as num?)?.toDouble() ?? 0.0,
+            grandTotal: controller.grandTotal,
             showBorder: false,
-            // ✅ NEW: Pass pickup/delivery info for display
             pickupDate: pickupDateStr,
             pickupTimeSlot: pickupTimeSlot.isNotEmpty ? pickupTimeSlot : null,
             deliveryDate: deliveryDateStr,
@@ -508,10 +675,11 @@ class ScheduleView extends GetView<ScheduleController> {
                   .toList(),
               subTotal: orderCtrl.subTotal,
               deliveryFee: orderCtrl.deliveryFee,
+              expressFee: controller.expressFee,
+              isExpressDelivery: controller.isExpressDelivery.value,
               tax: orderCtrl.tax,
-              grandTotal: orderCtrl.grandTotal,
+              grandTotal: controller.grandTotal,
               showBorder: false,
-              // ✅ NEW: Pass pickup/delivery info for display
               pickupDate: pickupDateStr,
               pickupTimeSlot: pickupTimeSlot.isNotEmpty ? pickupTimeSlot : null,
               deliveryDate: deliveryDateStr,
@@ -643,14 +811,32 @@ class ScheduleView extends GetView<ScheduleController> {
 
   /// Show Payment Bottom Sheet
   void _showPaymentBottomSheet(BuildContext context) {
-    // Get order totals
-    double grandTotal = 0.0;
+    // Check minimum gap validation
+    if (!controller.canProceedToCheckout) {
+      Get.snackbar(
+        'Invalid Schedule',
+        'Minimum 4 hours required between pickup and delivery',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    
+    // Get order totals (includes express fee if applicable)
+    double grandTotal = controller.grandTotal;
 
-    if (controller.orderSummaryData.isNotEmpty) {
-      grandTotal = controller.grandTotal;
-    } else if (Get.isRegistered<OrderSummaryController>()) {
+    if (grandTotal == 0 && Get.isRegistered<OrderSummaryController>()) {
       try {
-        grandTotal = Get.find<OrderSummaryController>().grandTotal;
+        final orderCtrl = Get.find<OrderSummaryController>();
+        // Update express state in OrderSummaryController
+        orderCtrl.setExpressDelivery(
+          pickupDate: controller.selectedPickupDate.value,
+          pickupTimeSlot: controller.selectedPickupTimeSlot.value,
+          deliveryDate: controller.selectedDeliveryDate.value,
+          deliveryTimeSlot: controller.selectedDeliveryTimeSlot.value,
+        );
+        grandTotal = orderCtrl.grandTotal;
       } catch (_) {}
     }
 
@@ -839,6 +1025,86 @@ class _PaymentBottomSheetContentState extends State<_PaymentBottomSheetContent> 
                       ),
                     ),
                     SizedBox(height: AppSizes.lg),
+
+                    // Express Delivery Indicator (if applicable)
+                    if (widget.controller.isExpressDelivery.value)
+                      Container(
+                        margin: EdgeInsets.only(bottom: AppSizes.lg),
+                        padding: EdgeInsets.all(AppSizes.md),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.orange.shade50,
+                              Colors.amber.shade50,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          border: Border.all(color: Colors.orange.shade400, width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orange.withOpacity(0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.bolt,
+                                color: Colors.orange.shade700,
+                                size: 22,
+                              ),
+                            ),
+                            SizedBox(width: AppSizes.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '⚡ Express Delivery Applied',
+                                    style: TextStyle(
+                                      fontSize: AppSizes.fontMd,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange.shade800,
+                                    ),
+                                  ),
+                                  Text(
+                                    '5% express fee included in total',
+                                    style: TextStyle(
+                                      fontSize: AppSizes.fontSm,
+                                      color: Colors.orange.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade700,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '+\$${widget.controller.expressFee.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
                     // Total Amount
                     Container(
