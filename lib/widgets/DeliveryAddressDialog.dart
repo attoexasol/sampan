@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/service/local_store.dart';
 import '../../data/service/network_caller.dart';
+import '../../data/service/customer_session_helper.dart';
 import '../../data/service/utils.dart';
 import '../constants/colors.dart';
 import '../controller/profile_controller.dart';
@@ -125,9 +126,10 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
     }
     if (!_formKey.currentState!.validate()) return;
 
-    final cid = await LocalStore.instance.getCustomerId();
+    final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('delivery-address');
+    if (cid == null) return;
     final apiToken = await LocalStore.instance.getApiToken();
-    if (cid == null || cid.isEmpty || apiToken == null || apiToken.isEmpty) {
+    if (apiToken == null || apiToken.isEmpty) {
       Get.snackbar(
         'Error',
         'Customer ID not found — please login again',

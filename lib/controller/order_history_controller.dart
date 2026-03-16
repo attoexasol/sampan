@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../data/service/network_caller.dart';
 import '../data/service/local_store.dart';
+import '../data/service/customer_session_helper.dart';
 import '../data/service/utils.dart';
 import '../data/models/api_order_model.dart';
 import '../constants/environmental_constants.dart';
@@ -16,6 +17,10 @@ class OrderHistoryController extends GetxController {
   final isLoading = false.obs;
   final orders = <ApiOrder>[].obs;
   final expandedOrderIds = <String>[].obs;
+  /// 0 = All, 1 = Active, 2 = Completed
+  final selectedFilterIndex = 0.obs;
+  /// Non-null when fetch failed; null when success or not yet tried
+  final fetchError = Rx<String?>(null);
 
   final Map<String, OrderDetails> detailsCache = {};
   final Map<String, bool> detailsLoading = {};
@@ -77,21 +82,43 @@ class OrderHistoryController extends GetxController {
     return {'water': water, 'detergent': detergent, 'gas': gas, 'energy': energy, 'co2': co2};
   }
 
+  /// Filtered list for current tab (newest first)
+  List<ApiOrder> get filteredOrders {
+    final list = orders.toList();
+    if (selectedFilterIndex.value == 1) {
+      return list.where((o) => o.statusCategory == OrderStatusCategory.active).toList();
+    }
+    if (selectedFilterIndex.value == 2) {
+      return list.where((o) => o.statusCategory == OrderStatusCategory.completed).toList();
+    }
+    return list;
+  }
+
+  void setFilterIndex(int index) {
+    if (index >= 0 && index <= 2) selectedFilterIndex.value = index;
+  }
+
+  void _safeSnackbar(String title, String message, {required bool isError}) {
+    if (Get.overlayContext == null) return;
+    Get.snackbar(
+      title,
+      message,
+      backgroundColor: isError ? Colors.red : Colors.orange,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
   Future<void> fetchOrders() async {
-    final cid = await LocalStore.instance.getCustomerId();
-    if (cid == null || cid.isEmpty) {
-      Get.snackbar(
-        'Login required',
-        'Please login first',
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+    final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('order-history');
+    if (cid == null) {
+      fetchError.value = 'Please log in to view order history.';
       return;
     }
 
     final apiToken = await LocalStore.instance.getApiToken() ?? _apiTokenFallback;
     isLoading.value = true;
+    fetchError.value = null;
     try {
       final response = await NetworkCaller.postRequest(
         url: Urls.getOrders_History,
@@ -110,16 +137,13 @@ class OrderHistoryController extends GetxController {
         }
       } else {
         orders.clear();
+        fetchError.value = response.errorMessage ?? 'Could not load orders.';
       }
     } catch (e) {
       debugPrint('OrderHistoryController fetchOrders error: $e');
       orders.clear();
-      Get.snackbar(
-        'Error',
-        'Failed to load order history',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      fetchError.value = e.toString().replaceAll('Exception: ', '');
+      _safeSnackbar('Error', 'Failed to load order history', isError: true);
     } finally {
       isLoading.value = false;
     }

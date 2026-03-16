@@ -16,8 +16,10 @@ import '../signup/signup_view.dart';
 import 'schedule_controller.dart';
 import '../../data/service/network_caller.dart';
 import '../../data/service/local_store.dart';
+import '../../data/service/customer_session_helper.dart';
 import '../../data/service/utils.dart';
 import '../../data/service/express_delivery_service.dart';
+import '../../data/service/rush_order_service.dart';
 
 /// ✅ UPDATED: OrderSummaryCard now shows pickup/delivery date and time
 class ScheduleView extends GetView<ScheduleController> {
@@ -318,22 +320,19 @@ class ScheduleView extends GetView<ScheduleController> {
                     ...controller.timeSlots.map((slot) {
                       final isAvailable = controller.isDeliveryTimeSlotAvailable(slot);
                       final isSelected = selectedDeliverySlot == slot;
-                      
-                      // Check if this slot would be express (turnaround < 24 hours)
-                      bool wouldBeExpress = false;
-                      if (isAvailable && 
-                          pickupDate != null && 
-                          deliveryDate != null && 
-                          pickupSlot.isNotEmpty) {
-                        final result = ExpressDeliveryService.instance.checkExpressDelivery(
-                          pickupDate: pickupDate,
-                          pickupTimeSlot: pickupSlot,
-                          deliveryDate: deliveryDate,
-                          deliveryTimeSlot: slot,
-                        );
-                        wouldBeExpress = result.isExpress;
-                      }
-                      
+                      final supportsRush = RushOrderService.instance.supportsRush(controller.rushServiceType.value);
+                      final isRushSlot = supportsRush && isAvailable && controller.isDeliverySlotRush(slot);
+                      final wouldBeExpress = !isRushSlot && isAvailable &&
+                          pickupDate != null && deliveryDate != null && pickupSlot.isNotEmpty &&
+                          ExpressDeliveryService.instance.checkExpressDelivery(
+                            pickupDate: pickupDate,
+                            pickupTimeSlot: pickupSlot,
+                            deliveryDate: deliveryDate,
+                            deliveryTimeSlot: slot,
+                          ).isExpress;
+                      final showThunder = isRushSlot || wouldBeExpress;
+                      final labelRush = isRushSlot;
+
                       return RadioListTile<String>(
                         title: Row(
                           children: [
@@ -350,45 +349,24 @@ class ScheduleView extends GetView<ScheduleController> {
                                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                                     ),
                                   ),
-                                  // Show lightning icon for express slots (< 24h turnaround)
-                                  if (isAvailable && wouldBeExpress) ...[
+                                  if (isAvailable && showThunder) ...[
                                     const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
+                                    Icon(
+                                      Icons.bolt,
+                                      size: 18,
+                                      color: isSelected 
+                                          ? Colors.orange.shade800 
+                                          : Colors.orange.shade600,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      labelRush ? 'Rush' : 'Express',
+                                      style: TextStyle(
+                                        fontSize: 11,
                                         color: isSelected 
-                                            ? Colors.orange.shade200 
-                                            : Colors.orange.shade50,
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: isSelected 
-                                              ? Colors.orange.shade600 
-                                              : Colors.orange.shade300,
-                                          width: isSelected ? 1.5 : 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.bolt,
-                                            size: 14,
-                                            color: isSelected 
-                                                ? Colors.orange.shade800 
-                                                : Colors.orange.shade600,
-                                          ),
-                                          const SizedBox(width: 2),
-                                          Text(
-                                            'Express',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: isSelected 
-                                                  ? Colors.orange.shade800 
-                                                  : Colors.orange.shade600,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
+                                            ? Colors.orange.shade800 
+                                            : Colors.orange.shade600,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ],
@@ -408,9 +386,7 @@ class ScheduleView extends GetView<ScheduleController> {
                         value: slot,
                         groupValue: selectedDeliverySlot,
                         onChanged: isAvailable
-                            ? (v) {
-                          controller.setDeliveryTimeSlot(v ?? '');
-                        }
+                            ? (v) => controller.setDeliveryTimeSlot(v ?? '')
                             : null,
                         contentPadding: EdgeInsets.zero,
                         dense: true,
@@ -433,25 +409,98 @@ class ScheduleView extends GetView<ScheduleController> {
                       ),
               ),
               
-              // Express Delivery Indicator
+              // Rush / Express Delivery Indicator
               Obx(() {
                 if (controller.selectedDeliveryTimeSlot.value.isEmpty) {
                   return const SizedBox.shrink();
                 }
-                
+                final isRush = controller.isRushDelivery.value;
                 final isExpress = controller.isExpressDelivery.value;
                 final duration = controller.deliveryDurationHours.value;
-                
+                final rushType = controller.rushServiceType.value;
+
+                if (isRush && duration != null) {
+                  final label = RushOrderService.instance.rushLabelFor(rushType);
+                  final message = rushType == RushServiceType.laundry
+                      ? RushOrderService.instance.laundryRushMessage
+                      : RushOrderService.instance.dryCleaningRushMessage;
+                  return Container(
+                    margin: const EdgeInsets.only(top: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.orange.shade50, Colors.amber.shade50],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.shade400, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.orange.withOpacity(0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.bolt, color: Colors.orange.shade700, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '⚡ $label',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange.shade800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${duration.toStringAsFixed(0)}h turnaround • $message',
+                                    style: TextStyle(fontSize: 12, color: Colors.orange.shade600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (rushType == RushServiceType.dryCleaning) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            RushOrderService.instance.dryCleaningRushNote,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }
                 if (isExpress && duration != null) {
                   return Container(
                     margin: const EdgeInsets.only(top: 16),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [
-                          Colors.orange.shade50,
-                          Colors.amber.shade50,
-                        ],
+                        colors: [Colors.orange.shade50, Colors.amber.shade50],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -473,36 +522,25 @@ class ScheduleView extends GetView<ScheduleController> {
                             color: Colors.orange.shade100,
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
-                            Icons.bolt,
-                            color: Colors.orange.shade700,
-                            size: 22,
-                          ),
+                          child: Icon(Icons.bolt, color: Colors.orange.shade700, size: 22),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    '⚡ Express Delivery',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.orange.shade800,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                '⚡ Express Delivery',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange.shade800,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 '${duration.toStringAsFixed(0)}h turnaround • 5% express fee applies',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange.shade600,
-                                ),
+                                style: TextStyle(fontSize: 12, color: Colors.orange.shade600),
                               ),
                             ],
                           ),
@@ -511,7 +549,6 @@ class ScheduleView extends GetView<ScheduleController> {
                     ),
                   );
                 }
-                
                 return const SizedBox.shrink();
               }),
             ],
@@ -640,10 +677,37 @@ class ScheduleView extends GetView<ScheduleController> {
       // First, try to get data from ScheduleController (passed via arguments)
       final orderData = controller.orderSummaryData;
 
+      OrderSummaryController? orderCtrl;
+      if (Get.isRegistered<OrderSummaryController>()) {
+        try {
+          orderCtrl = Get.find<OrderSummaryController>();
+        } catch (_) {
+          orderCtrl = null;
+        }
+      }
+      final useOrderCtrl = orderCtrl != null && orderCtrl!.hasAnySelection;
+
+      if (useOrderCtrl) {
+        return OrderSummaryCard(
+          items: orderCtrl!.items.values.map((e) => e.toJson()).toList(),
+          subTotal: orderCtrl.subTotal,
+          deliveryFee: orderCtrl.deliveryFee,
+          expressFee: orderCtrl.expressFee,
+          isExpressDelivery: orderCtrl.isExpressDelivery.value,
+          isRushDelivery: orderCtrl.isRushDelivery.value,
+          tax: orderCtrl.tax,
+          grandTotal: orderCtrl.grandTotal,
+          showBorder: false,
+          pickupDate: pickupDateStr,
+          pickupTimeSlot: pickupTimeSlot.isNotEmpty ? pickupTimeSlot : null,
+          deliveryDate: deliveryDateStr,
+          deliveryTimeSlot: deliveryTimeSlot.isNotEmpty ? deliveryTimeSlot : null,
+        );
+      }
+
       if (orderData.isNotEmpty) {
         final items = controller.orderItems;
         final totals = controller.orderTotals;
-
         if (items.isNotEmpty) {
           return OrderSummaryCard(
             items: items,
@@ -651,6 +715,7 @@ class ScheduleView extends GetView<ScheduleController> {
             deliveryFee: (totals['deliveryFee'] as num?)?.toDouble() ?? 0.0,
             expressFee: controller.expressFee,
             isExpressDelivery: controller.isExpressDelivery.value,
+            isRushDelivery: controller.isRushDelivery.value,
             tax: (totals['tax'] as num?)?.toDouble() ?? 0.0,
             grandTotal: controller.grandTotal,
             showBorder: false,
@@ -659,35 +724,6 @@ class ScheduleView extends GetView<ScheduleController> {
             deliveryDate: deliveryDateStr,
             deliveryTimeSlot: deliveryTimeSlot.isNotEmpty ? deliveryTimeSlot : null,
           );
-        }
-      }
-
-      // Second, try to get data from OrderSummaryController if registered
-      if (Get.isRegistered<OrderSummaryController>()) {
-        try {
-          final orderCtrl = Get.find<OrderSummaryController>();
-
-          // Check if controller has any items
-          if (orderCtrl.hasAnySelection) {
-            return OrderSummaryCard(
-              items: orderCtrl.items.values
-                  .map((item) => item.toJson())
-                  .toList(),
-              subTotal: orderCtrl.subTotal,
-              deliveryFee: orderCtrl.deliveryFee,
-              expressFee: controller.expressFee,
-              isExpressDelivery: controller.isExpressDelivery.value,
-              tax: orderCtrl.tax,
-              grandTotal: controller.grandTotal,
-              showBorder: false,
-              pickupDate: pickupDateStr,
-              pickupTimeSlot: pickupTimeSlot.isNotEmpty ? pickupTimeSlot : null,
-              deliveryDate: deliveryDateStr,
-              deliveryTimeSlot: deliveryTimeSlot.isNotEmpty ? deliveryTimeSlot : null,
-            );
-          }
-        } catch (e) {
-          debugPrint('Warning: Error accessing OrderSummaryController: $e');
         }
       }
 
@@ -826,11 +862,11 @@ class ScheduleView extends GetView<ScheduleController> {
     // Get order totals (includes express fee if applicable)
     double grandTotal = controller.grandTotal;
 
-    if (grandTotal == 0 && Get.isRegistered<OrderSummaryController>()) {
+    if (Get.isRegistered<OrderSummaryController>()) {
       try {
         final orderCtrl = Get.find<OrderSummaryController>();
-        // Update express state in OrderSummaryController
-        orderCtrl.setExpressDelivery(
+        orderCtrl.setRushAndExpressDelivery(
+          serviceType: controller.serviceType.value,
           pickupDate: controller.selectedPickupDate.value,
           pickupTimeSlot: controller.selectedPickupTimeSlot.value,
           deliveryDate: controller.selectedDeliveryDate.value,
@@ -839,6 +875,7 @@ class ScheduleView extends GetView<ScheduleController> {
         grandTotal = orderCtrl.grandTotal;
       } catch (_) {}
     }
+    if (grandTotal == 0) grandTotal = controller.grandTotal;
 
     // Get pickup/delivery dates
     final pickupDate = controller.selectedPickupDate.value;
@@ -1281,91 +1318,12 @@ class _PaymentBottomSheetContentState extends State<_PaymentBottomSheetContent> 
     });
 
     try {
-      // Get customer ID - try multiple methods
-      String? customerId = await LocalStore.instance.getCustomerId();
-      debugPrint('🔍 Payment: Retrieved customer ID from getCustomerId(): $customerId');
-      
-      // If not found, try to get from last API response
-      if (customerId == null || customerId.isEmpty) {
-        final lastResponse = await LocalStore.instance.getLastApiResponse();
-        debugPrint('🔍 Payment: Last API response: $lastResponse');
-        
-        if (lastResponse != null) {
-          debugPrint('🔍 Payment: Last API response keys: ${lastResponse.keys.toList()}');
-          
-          // Try comprehensive key search (same as saveCustomerIdFromResponse)
-          final keysToTry = [
-            'CustomerID', 'customerID', 'customer_id', 'customerId', 'CustomerId',
-            'cid', 'CID', 'Cid',
-            'id', 'ID', 'Id',
-            'customerID', 'Customer_ID',
-          ];
-          
-          for (final key in keysToTry) {
-            if (lastResponse.containsKey(key) && lastResponse[key] != null) {
-              final value = lastResponse[key];
-              if (value is String && value.isNotEmpty) {
-                customerId = value.trim();
-                debugPrint('🔍 Payment: Found customer ID (string) in response with key "$key": $customerId');
-                break;
-              } else if (value is num) {
-                customerId = value.toString().trim();
-                debugPrint('🔍 Payment: Found customer ID (numeric) in response with key "$key": $customerId');
-                break;
-              } else if (value != null) {
-                final strValue = value.toString().trim();
-                if (strValue.isNotEmpty) {
-                  customerId = strValue;
-                  debugPrint('🔍 Payment: Found customer ID (converted) in response with key "$key": $customerId');
-                  break;
-                }
-              }
-            }
-          }
-          
-          // If still not found, try case-insensitive search
-          if (customerId == null || customerId.isEmpty) {
-            for (final responseKey in lastResponse.keys) {
-              final lowerKey = responseKey.toString().toLowerCase();
-              if (lowerKey.contains('customer') && lowerKey.contains('id')) {
-                final value = lastResponse[responseKey];
-                if (value != null) {
-                  if (value is String && value.isNotEmpty) {
-                    customerId = value.trim();
-                    debugPrint('🔍 Payment: Found customer ID (case-insensitive) with key "$responseKey": $customerId');
-                    break;
-                  } else if (value is num) {
-                    customerId = value.toString().trim();
-                    debugPrint('🔍 Payment: Found customer ID (case-insensitive, numeric) with key "$responseKey": $customerId');
-                    break;
-                  }
-                }
-              }
-            }
-          }
-          
-          // Save it for future use if found
-          if (customerId != null && customerId.isNotEmpty) {
-            await LocalStore.instance.saveCustomerId(customerId);
-            debugPrint('✅ Payment: Customer ID saved for future use: $customerId');
-          }
-        }
+      // Centralized: require valid customer ID or show snackbar and redirect to Sign In
+      final customerId = await CustomerSessionHelper.requireCustomerIdOrRedirect('schedule-payment');
+      if (customerId == null) {
+        setState(() => _isProcessingPayment = false);
+        return;
       }
-      
-      // Final check
-      if (customerId == null || customerId.isEmpty) {
-        // Check if user is logged in
-        final isLoggedIn = await LocalStore.instance.isLoggedIn();
-        debugPrint('🔍 Payment: Is logged in: $isLoggedIn');
-        
-        if (!isLoggedIn) {
-          throw Exception('Please login first');
-        } else {
-          // User is logged in but customer ID is missing
-          throw Exception('Customer ID not found. Please login again.');
-        }
-      }
-      
       debugPrint('✅ Payment: Using customer ID: $customerId');
 
       // Convert amount to cents (Stripe uses cents)

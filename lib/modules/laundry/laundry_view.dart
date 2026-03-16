@@ -55,7 +55,11 @@ class LaundryView extends StatelessWidget {
                           SizedBox(height: AppSizes.md),
                           const SubscriptionCard(),
                           SizedBox(height: AppSizes.md),
-                          const PayAsYouGoCard(),
+                          // --- PAY AS YOU GO SECTION (DISABLED) START ---
+                          // SizedBox(height: AppSizes.md),
+                          // const PayAsYouGoCard(),
+                          // SizedBox(height: AppSizes.md),
+                          // --- PAY AS YOU GO SECTION (DISABLED) END ---
                           SizedBox(height: AppSizes.md),
                           const BulkyItemsSection(),
                           SizedBox(height: AppSizes.md),
@@ -121,6 +125,7 @@ class LaundryView extends StatelessWidget {
                     () => const ScheduleView(),
                     binding: ScheduleBinding(),
                     arguments: {
+                      'serviceType': 'laundry',
                       'orderSummary': controller.getOrderSummarySnapshot(),
                     },
                   );

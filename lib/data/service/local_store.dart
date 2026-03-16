@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sampan/data/models/user_profile.dart';
 import '../../data/models/order_history_model.dart';
+import '../../data/models/subscription_state_model.dart';
 import '../../models/product_model.dart';
 
 class LocalStore {
@@ -70,14 +71,26 @@ class LocalStore {
     await prefs.remove(_productsTimestampKey);
   }
 
-  // SAVE CUSTOMER ID
+  /// Returns true only when id is non-null, non-empty, and not the literal "null".
+  /// Use this to reject empty, whitespace-only, or the string "null".
+  static bool isValidCustomerId(String? id) {
+    if (id == null) return false;
+    final t = id.trim();
+    return t.isNotEmpty && t.toLowerCase() != 'null';
+  }
+
+  static bool _isValidCustomerId(String? id) => isValidCustomerId(id);
+
+  // SAVE CUSTOMER ID (only saves valid values; used by registration/login and APIs)
   Future<void> saveCustomerId(String cid) async {
+    if (!isValidCustomerId(cid)) {
+      debugPrint('⚠️ saveCustomerId: Skipped invalid value "$cid"');
+      return;
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_customerIdKey, cid);
-      debugPrint('✅ saveCustomerId: Saved customer ID "$cid" to key "$_customerIdKey"');
-      
-      // Verify it was saved
+      await prefs.setString(_customerIdKey, cid.trim());
+      debugPrint('✅ saveCustomerId: Saved customer ID "${cid.trim()}" to key "$_customerIdKey"');
       final verify = prefs.getString(_customerIdKey);
       debugPrint('✅ saveCustomerId: Verification - Retrieved value: "$verify"');
     } catch (e) {
@@ -103,11 +116,27 @@ class LocalStore {
     }
   }
 
+  /// Returns a valid customer ID (trimmed, non-empty, not "null") or null.
+  /// Single source for "is this session valid for API calls?"
+  Future<String?> getValidCustomerId() async {
+    final raw = await getCustomerId();
+    if (!isValidCustomerId(raw)) return null;
+    return raw!.trim();
+  }
+
+  /// Clear only customer ID (e.g. for testing). Logout uses clearSession() which clears all session keys.
+  Future<void> clearCustomerId() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_customerIdKey);
+    debugPrint('✅ clearCustomerId: Removed $_customerIdKey');
+  }
+
   // -----------------------------------------------------
   // SESSION (api_token, customer_id, user_name, user_email)
   // -----------------------------------------------------
 
   /// Save session data — single source of truth for user info and delivery address.
+  /// CustomerID/cid from registration or login is saved only when valid (not empty, not "null").
   Future<void> saveSession({
     String? customerId,
     String? apiToken,
@@ -118,7 +147,9 @@ class LocalStore {
     String? instructions,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    if (customerId != null) await prefs.setString(_customerIdKey, customerId);
+    if (_isValidCustomerId(customerId)) {
+      await prefs.setString(_customerIdKey, customerId!.trim());
+    }
     if (apiToken != null) await prefs.setString(_apiTokenKey, apiToken);
     if (name != null) await prefs.setString(_userNameKey, name);
     if (email != null) await prefs.setString(_userEmailKey, email);
@@ -168,8 +199,11 @@ class LocalStore {
     await prefs.remove(_customerAddressKey);
     await prefs.remove(_deliveryInstructionsKey);
     await prefs.setBool(_loggedInKey, false);
+    await prefs.remove(_dreamBigSubscriptionKey);
   }
 
+  /// Extract and save customer ID from login/signup API response.
+  /// Priority: CustomerID then cid (first match wins). Supports int or string; stored as trimmed string.
   Future<void> saveCustomerIdFromResponse(Map<String, dynamic> json) async {
     debugPrint('🔍 saveCustomerIdFromResponse: Starting extraction from response');
     debugPrint('🔍 saveCustomerIdFromResponse: Response keys: ${json.keys.toList()}');
@@ -177,7 +211,7 @@ class LocalStore {
     
     String? cid;
 
-    // Try common keys for customer ID (case-insensitive search)
+    // Try common keys for customer ID (order = priority: CustomerID then cid)
     final keysToTry = [
       'CustomerID', 'customerID', 'customer_id', 'customerId', 'CustomerId',
       'cid', 'CID', 'Cid',
@@ -234,13 +268,13 @@ class LocalStore {
       }
     }
 
-    if (cid != null && cid.isNotEmpty) {
-      await saveCustomerId(cid);
+    if (_isValidCustomerId(cid)) {
+      await saveCustomerId(cid!);
       debugPrint('✅ Customer ID saved successfully: $cid');
     } else {
-      debugPrint('⚠️ Customer ID not found in response!');
+      debugPrint('⚠️ Customer ID not found or invalid in response (null/empty/"null")');
       debugPrint('⚠️ Available keys: ${json.keys.toList()}');
-      debugPrint('⚠️ Full response structure: $json');
+      debugPrint('⚠️ Extracted cid: $cid');
     }
   }
   
@@ -378,6 +412,34 @@ class LocalStore {
 
   static const String _orderHistoryKey = 'order_history_v1';
   static const int _maxOrderHistory = 10;
+
+  // ============================================================
+  // DREAM BIG PLAN SUBSCRIPTION STATE
+  // ============================================================
+
+  static const String _dreamBigSubscriptionKey = 'dream_big_subscription_v1';
+
+  Future<void> saveDreamBigSubscription(SubscriptionStateModel state) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_dreamBigSubscriptionKey, jsonEncode(state.toJson()));
+  }
+
+  Future<SubscriptionStateModel?> getDreamBigSubscription() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_dreamBigSubscriptionKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>?;
+      return SubscriptionStateModel.fromJson(decoded);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearDreamBigSubscription() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_dreamBigSubscriptionKey);
+  }
 
   /// Save order
   Future<void> saveOrderToHistory(OrderHistoryItem order) async {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
 import '../../data/service/network_caller.dart';
-import '../../data/service/local_store.dart';
+import '../../data/service/customer_session_helper.dart';
 import '../data/service/utils.dart';
 
 class PaymentMethodDialog extends StatefulWidget {
@@ -26,10 +26,9 @@ class _PaymentMethodDialogState extends State<PaymentMethodDialog> {
     try {
       setState(() => _isProcessing = true);
 
-      final customerId = await LocalStore.instance.getCustomerId();
+      final customerId = await CustomerSessionHelper.requireCustomerIdOrRedirect('payment-method');
       if (customerId == null) {
-        Get.snackbar("Error", "Customer ID not found. Please login again.",
-            backgroundColor: Colors.red, colorText: Colors.white);
+        setState(() => _isProcessing = false);
         return;
       }
 

@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../bindings/laundry_binding.dart';
+import '../controller/order_history_controller.dart';
 import '../modules/home/home_binding.dart';
 import '../modules/home/home_view.dart';
 import '../modules/login/login_binding.dart';
@@ -9,6 +10,7 @@ import '../modules/signup/signup_binding.dart';
 import '../modules/signup/signup_view.dart';
 import '../modules/schedule/schedule_binding.dart';
 import '../modules/schedule/schedule_view.dart';
+import '../screens/order_history_screen.dart';
 import '../widgets/laundry_how_it_works.dart';
 import 'app_routes.dart';
 
@@ -23,6 +25,13 @@ class AppPages {
     GetPage(name: '/forgot-password', page: () => ForgetPasswordScreen()),
   GetPage(name: Routes.LAUNDRY,page: () => const LaundryHowItWorksPage(),binding: LaundryBinding(),                 // injects OrderSummaryController
   ),
-    GetPage(name: Routes.SCHEDULE, page: () => const ScheduleView(), binding: ScheduleBinding(),)
+    GetPage(name: Routes.SCHEDULE, page: () => const ScheduleView(), binding: ScheduleBinding(),),
+    GetPage(
+      name: Routes.ORDER_HISTORY,
+      page: () => const OrderHistoryScreen(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<OrderHistoryController>(() => OrderHistoryController());
+      }),
+    ),
   ];
 }

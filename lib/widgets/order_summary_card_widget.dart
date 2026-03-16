@@ -194,9 +194,10 @@ class OrderSummaryCard extends StatelessWidget {
   final double grandTotal;
   final bool showBorder;
 
-  // Express delivery
+  // Express / Rush delivery
   final double expressFee;
   final bool isExpressDelivery;
+  final bool isRushDelivery;
 
   // Pickup/Delivery scheduling info
   final String? pickupDate;
@@ -221,6 +222,7 @@ class OrderSummaryCard extends StatelessWidget {
     this.showBorder = true,
     this.expressFee = 0.0,
     this.isExpressDelivery = false,
+    this.isRushDelivery = false,
     this.pickupDate,
     this.pickupTimeSlot,
     this.deliveryDate,
@@ -342,8 +344,9 @@ class OrderSummaryCard extends StatelessWidget {
               deliveryFee,
               isFree: deliveryFee == 0,
             ),
-            // Express Fee (only show if express delivery)
-            if (isExpressDelivery && expressFee > 0)
+            if (isRushDelivery)
+              _buildSummaryRow('Rush (2× price)', 0, isExpress: true, isRushLabel: true),
+            if (isExpressDelivery && expressFee > 0 && !isRushDelivery)
               _buildSummaryRow(
                 'Express Fee (5%)',
                 expressFee,
@@ -391,23 +394,23 @@ class OrderSummaryCard extends StatelessWidget {
 
   /// Build the schedule section showing pickup and delivery info
   Widget _buildScheduleSection() {
+    final showRushOrExpress = isRushDelivery || isExpressDelivery;
     return Container(
       padding: EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
-        color: isExpressDelivery 
-            ? Colors.orange.shade50 
+        color: showRushOrExpress
+            ? Colors.orange.shade50
             : AppColors.primaryLighter.withOpacity(0.5),
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
         border: Border.all(
-          color: isExpressDelivery 
-              ? Colors.orange.shade300 
+          color: showRushOrExpress
+              ? Colors.orange.shade300
               : AppColors.primary.withOpacity(0.3),
         ),
       ),
       child: Column(
         children: [
-          // Express Badge (if express delivery)
-          if (isExpressDelivery) ...[
+          if (isRushDelivery) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -421,11 +424,38 @@ class OrderSummaryCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.bolt,
-                        size: 14,
-                        color: Colors.orange.shade700,
+                      Icon(Icons.bolt, size: 14, color: Colors.orange.shade700),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Rush',
+                        style: TextStyle(
+                          fontSize: AppSizes.fontSm,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange.shade700,
+                        ),
                       ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: AppSizes.sm),
+          ],
+          if (isExpressDelivery && !isRushDelivery) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.shade300),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.bolt, size: 14, color: Colors.orange.shade700),
                       const SizedBox(width: 4),
                       Text(
                         'Express Delivery',
@@ -472,15 +502,16 @@ class OrderSummaryCard extends StatelessWidget {
               ),
             ),
 
-          // Delivery Row with express icon
+          // Delivery Row with rush/express icon
           if (deliveryDate != null && deliveryDate!.isNotEmpty)
             _buildScheduleRow(
-              icon: isExpressDelivery ? Icons.bolt : LucideIcons.home,
+              icon: (isRushDelivery || isExpressDelivery) ? Icons.bolt : LucideIcons.home,
               label: 'Delivery',
               date: deliveryDate!,
               time: deliveryTimeSlot,
-              iconColor: isExpressDelivery ? Colors.orange.shade700 : Colors.green,
-              showExpressBadge: isExpressDelivery,
+              iconColor: (isRushDelivery || isExpressDelivery) ? Colors.orange.shade700 : Colors.green,
+              showExpressBadge: isRushDelivery || isExpressDelivery,
+              badgeLabel: isRushDelivery ? 'Rush' : null,
             ),
         ],
       ),
@@ -495,6 +526,7 @@ class OrderSummaryCard extends StatelessWidget {
     String? time,
     required Color iconColor,
     bool showExpressBadge = false,
+    String? badgeLabel,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -505,13 +537,30 @@ class OrderSummaryCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: AppSizes.fontSm,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mutedForeground,
-                ),
+              Row(
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: AppSizes.fontSm,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                  if (showExpressBadge) ...[
+                    SizedBox(width: 6),
+                    Icon(Icons.bolt, size: 12, color: Colors.orange.shade700),
+                    SizedBox(width: 2),
+                    Text(
+                      badgeLabel ?? 'Express',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ],
+                ],
               ),
               SizedBox(height: 2),
               Text(
@@ -608,7 +657,7 @@ class OrderSummaryCard extends StatelessWidget {
   }
 
   Widget _buildSummaryRow(String label, double amount,
-      {bool isTotal = false, bool isFree = false, bool isExpress = false}) {
+      {bool isTotal = false, bool isFree = false, bool isExpress = false, bool isRushLabel = false}) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: AppSizes.xs),
       child: Row(
@@ -616,9 +665,9 @@ class OrderSummaryCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              if (isExpress) ...[
+              if (isExpress || isRushLabel) ...[
                 Icon(
-                  Icons.flash_on,
+                  Icons.bolt,
                   size: 16,
                   color: Colors.orange.shade700,
                 ),
@@ -629,19 +678,19 @@ class OrderSummaryCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: isTotal ? AppSizes.fontLg : AppSizes.fontMd,
                   fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-                  color: isExpress ? Colors.orange.shade700 : AppColors.foreground,
+                  color: (isExpress || isRushLabel) ? Colors.orange.shade700 : AppColors.foreground,
                 ),
               ),
             ],
           ),
           Text(
-            isFree ? 'FREE' : '\$${amount.toStringAsFixed(2)}',
+            isRushLabel ? 'Included' : (isFree ? 'FREE' : '\$${amount.toStringAsFixed(2)}'),
             style: TextStyle(
               fontSize: isTotal ? AppSizes.fontXl : AppSizes.fontMd,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
               color: isTotal 
                   ? AppColors.primary 
-                  : (isExpress ? Colors.orange.shade700 : AppColors.foreground),
+                  : ((isExpress || isRushLabel) ? Colors.orange.shade700 : AppColors.foreground),
             ),
           ),
         ],

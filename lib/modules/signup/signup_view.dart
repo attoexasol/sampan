@@ -257,6 +257,27 @@ class SignupView extends GetView<SignupController> {
                     ),
                     validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
                   ),
+                  SizedBox(height: AppSizes.md),
+                  TextFormField(
+                    controller: controller.referralCodeController,
+                    decoration: InputDecoration(
+                      labelText: 'Referral Code (Optional)',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                    ),
+                  ),
                   SizedBox(height: AppSizes.lg),
 
                   _buildSectionTitle('Security'),

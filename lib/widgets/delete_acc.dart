@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../data/service/customer_session_helper.dart';
 import '../../data/service/local_store.dart';
 import '../../data/service/network_caller.dart';
 import '../../routes/app_routes.dart';
@@ -56,17 +57,8 @@ class DeleteAccountDialog {
     if (confirm != true) return;
 
     try {
-      final customerId = await LocalStore.instance.getCustomerId();
-
-      if (customerId == null || customerId.isEmpty) {
-        Get.snackbar(
-          'Error',
-          'Customer ID not found. Please log in again.',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        return;
-      }
+      final customerId = await CustomerSessionHelper.requireCustomerIdOrRedirect('delete-account');
+      if (customerId == null) return;
 
       Get.dialog(
         const Center(child: CircularProgressIndicator()),

@@ -7,6 +7,7 @@ import 'package:sampan/constants/colors.dart';
 import 'package:sampan/constants/sizes.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../controller/profile_controller.dart';
+import '../data/service/customer_session_helper.dart';
 import '../widgets/DeliveryAddressDialog.dart';
 import '../widgets/GiftCardDialog.dart';
 import '../widgets/delete_acc.dart';
@@ -18,7 +19,7 @@ import '../widgets/preferences.dart';
 import '../widgets/rate_experience_dialog.dart';
 import '../widgets/sustainability_promise_dialog.dart';
 import '../widgets/your_wallet.dart';
-import '../widgets/order_history_dialog.dart';
+import '../screens/order_history_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({Key? key}) : super(key: key);
@@ -131,10 +132,12 @@ class _AccountScreenState extends State<AccountScreen> {
                           child: _buildFeatureCard(
                           icon: Icons.account_balance_wallet_outlined,
                           label: 'Your Wallet',
-                          onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const YourWalletWidget()),
+                          onTap: () async {
+                            final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('your-wallet');
+                            if (cid == null || !mounted) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const YourWalletWidget()),
                             );
                           },
                         ),
@@ -144,7 +147,9 @@ class _AccountScreenState extends State<AccountScreen> {
                           child: _buildFeatureCard(
                           icon: Icons.card_giftcard,
                           label: 'Buy Gift Card',
-                          onTap: () {
+                          onTap: () async {
+                            final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('gift-card');
+                            if (cid == null || !mounted) return;
                             showDialog(
                               context: context,
                               builder: (_) => const GiftCardDialog(),
@@ -178,19 +183,29 @@ class _AccountScreenState extends State<AccountScreen> {
                           _buildMenuItem(
                             icon: Icons.credit_card_outlined,
                             label: 'Payment Methods',
-                            onTap: () => Get.dialog(const PaymentMethodsDialog()),
+                            onTap: () async {
+                              final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('payment-methods');
+                              if (cid == null || !mounted) return;
+                              Get.dialog(const PaymentMethodsDialog());
+                            },
                           ),
                           _buildDivider(),
                           _buildMenuItem(
                             icon: Icons.location_on_outlined,
                             label: 'Delivery Address',
-                            onTap: () => Get.dialog(const DeliveryAddressDialog()),
+                            onTap: () async {
+                              final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('delivery-address');
+                              if (cid == null || !mounted) return;
+                              Get.dialog(const DeliveryAddressDialog());
+                            },
                           ),
                           _buildDivider(),
                           _buildMenuItem(
                             icon: Icons.settings_outlined,
                             label: 'Your Preferences',
-                            onTap: () {
+                            onTap: () async {
+                              final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('preferences');
+                              if (cid == null || !mounted) return;
                               Get.to(() => const PreferencesScreen());
                             },
                           ),
@@ -356,14 +371,11 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  // 🔹 Order History Card - Match React: p-6, h-5 w-5 icons, gap-3
+  // 🔹 Order History Card - Navigate to full Order History screen (API)
   Widget _buildOrderHistoryCard() {
     return InkWell(
       onTap: () {
-        showDialog(
-          context: context,
-          builder: (context) => const OrderHistoryDialog(),
-        );
+        Get.to(() => const OrderHistoryScreen());
       },
       borderRadius: BorderRadius.circular(12), // rounded-lg
       child: Container(
@@ -432,7 +444,12 @@ class _AccountScreenState extends State<AccountScreen> {
   // 🔹 Invite Friends Card - Match React: p-6, h-5 w-5 icons, gap-3
   Widget _buildInviteFriendsCard() {
     return InkWell(
-      onTap: () => InviteFriendsWidget.showInviteDialog(context),
+      onTap: () async {
+        final customerId = await CustomerSessionHelper.requireCustomerIdOrRedirect('invite-friends');
+        if (customerId == null) return;
+        if (!mounted) return;
+        InviteFriendsWidget.showInviteDialog(context, customerId: customerId);
+      },
       borderRadius: BorderRadius.circular(12), // rounded-lg
       child: Container(
         padding: const EdgeInsets.all(24), // p-6 = 24px

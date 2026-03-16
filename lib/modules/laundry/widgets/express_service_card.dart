@@ -71,15 +71,13 @@ class ExpressServiceCard extends StatelessWidget {
           ),
           SizedBox(height: AppSizes.md),
           Text(
-            'Need it faster? Express delivery is automatically applied when you schedule delivery within 24 hours of pickup!',
+            'Rush Laundry: Choose a delivery slot within 12 hours of pickup for double the regular price (~12h ready). Otherwise, delivery within 24 hours adds a 5% express fee.',
             style: TextStyle(
               fontSize: AppSizes.fontMd,
               color: AppColors.mutedForeground,
             ),
           ),
           SizedBox(height: AppSizes.md),
-          
-          // Express policy info
           Container(
             padding: EdgeInsets.all(AppSizes.md),
             decoration: BoxDecoration(
@@ -90,27 +88,17 @@ class ExpressServiceCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildPolicyRow(
-                  icon: Icons.bolt,
-                  text: 'Delivery within 24 hours of pickup',
-                ),
+                _buildPolicyRow(icon: Icons.bolt, text: 'Rush Laundry: ≤12h from pickup → 2× price, ⚡ shown on slot'),
                 SizedBox(height: AppSizes.sm),
-                _buildPolicyRow(
-                  icon: Icons.percent,
-                  text: '5% express fee added automatically',
-                ),
+                _buildPolicyRow(icon: Icons.timer_outlined, text: 'Express: 12–24h from pickup → 5% fee'),
                 SizedBox(height: AppSizes.sm),
-                _buildPolicyRow(
-                  icon: Icons.timer_outlined,
-                  text: 'Minimum 4-hour turnaround required',
-                ),
+                _buildPolicyRow(icon: Icons.schedule, text: 'Minimum 4-hour gap between pickup and delivery'),
               ],
             ),
           ),
-          
           SizedBox(height: AppSizes.md),
           Text(
-            'Express fee will be calculated and shown during checkout when you select your pickup and delivery times.',
+            'Rush and express are calculated when you select pickup and delivery times on the next screen.',
             style: TextStyle(
               fontSize: AppSizes.fontSm,
               color: AppColors.mutedForeground,

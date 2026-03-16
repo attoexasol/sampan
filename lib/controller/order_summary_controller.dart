@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../data/service/express_delivery_service.dart';
+import '../data/service/rush_order_service.dart';
 
 class SummaryItem {
   final String key;          // unique id (e.g., 'elite', 'sub', 'payg', 'pillow')
@@ -48,6 +49,9 @@ class OrderSummaryController extends GetxController {
   /// Express delivery state (automatically set based on schedule)
   final RxBool isExpressDelivery = false.obs;
   final RxDouble expressDurationHours = 0.0.obs;
+
+  /// Rush delivery: slot within service rush window (12h laundry, 24h dry cleaning). 2x price, no express fee.
+  final RxBool isRushDelivery = false.obs;
 
   bool get hasAnySelection => items.isNotEmpty;
 
@@ -108,22 +112,62 @@ class OrderSummaryController extends GetxController {
     }
   }
 
-  /// Calculate totals
-  double get subTotal => items.values.fold(0.0, (sum, it) => sum + it.lineTotal);
+  /// Base subtotal (before rush multiplier)
+  double get baseSubTotal => items.values.fold(0.0, (sum, it) => sum + it.lineTotal);
 
-  double get deliveryFee => subTotal >= 80 ? 0.0 : 10.99;
+  /// Subtotal: 2x when Rush, else 1x
+  double get subTotal {
+    final base = baseSubTotal;
+    return isRushDelivery.value ? base * RushOrderService.rushPriceMultiplier : base;
+  }
 
-  /// Express fee: 5% of subtotal if express delivery
-  double get expressFee => ExpressDeliveryService.instance.calculateExpressFee(
-    subTotal, 
-    isExpressDelivery.value,
-  );
+  double get deliveryFee {
+    final base = baseSubTotal;
+    return base >= 80 ? 0.0 : 10.99;
+  }
+
+  /// Express fee: 0 when Rush; otherwise 5% of base subtotal if express delivery
+  double get expressFee {
+    if (isRushDelivery.value) return 0.0;
+    return ExpressDeliveryService.instance.calculateExpressFee(
+      baseSubTotal,
+      isExpressDelivery.value,
+    );
+  }
 
   double get tax => subTotal * gstRate;
 
   double get grandTotal => subTotal + deliveryFee + expressFee + tax;
 
-  /// Set express delivery state based on schedule
+  /// Set rush and express delivery state from schedule. Call with serviceType from ScheduleController.
+  void setRushAndExpressDelivery({
+    required String? serviceType,
+    required DateTime? pickupDate,
+    required String? pickupTimeSlot,
+    required DateTime? deliveryDate,
+    required String? deliveryTimeSlot,
+  }) {
+    final rushType = RushOrderService.instance.serviceTypeFromString(serviceType);
+    final rushResult = RushOrderService.instance.evaluateDeliverySlot(
+      serviceType: rushType,
+      pickupDate: pickupDate,
+      pickupTimeSlot: pickupTimeSlot,
+      deliveryDate: deliveryDate,
+      deliveryTimeSlot: deliveryTimeSlot,
+    );
+    final expressResult = ExpressDeliveryService.instance.checkExpressDelivery(
+      pickupDate: pickupDate,
+      pickupTimeSlot: pickupTimeSlot,
+      deliveryDate: deliveryDate,
+      deliveryTimeSlot: deliveryTimeSlot,
+    );
+
+    isRushDelivery.value = rushResult.isRush;
+    isExpressDelivery.value = !rushResult.isRush && expressResult.isExpress;
+    expressDurationHours.value = expressResult.durationHours ?? rushResult.durationHours ?? 0.0;
+  }
+
+  /// Set express delivery state based on schedule (legacy; prefer setRushAndExpressDelivery)
   void setExpressDelivery({
     required DateTime? pickupDate,
     required String? pickupTimeSlot,
@@ -136,14 +180,15 @@ class OrderSummaryController extends GetxController {
       deliveryDate: deliveryDate,
       deliveryTimeSlot: deliveryTimeSlot,
     );
-    
+    isRushDelivery.value = false;
     isExpressDelivery.value = result.isExpress;
     expressDurationHours.value = result.durationHours ?? 0.0;
   }
 
-  /// Reset express delivery state
+  /// Reset express and rush state
   void resetExpressDelivery() {
     isExpressDelivery.value = false;
+    isRushDelivery.value = false;
     expressDurationHours.value = 0.0;
   }
 
@@ -158,6 +203,7 @@ class OrderSummaryController extends GetxController {
       'grandTotal': grandTotal,
       'gstRate': gstRate,
       'isExpressDelivery': isExpressDelivery.value,
+      'isRushDelivery': isRushDelivery.value,
       'expressDurationHours': expressDurationHours.value,
     },
   };

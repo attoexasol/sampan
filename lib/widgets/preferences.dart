@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/service/local_store.dart';
+import '../../data/service/customer_session_helper.dart';
 import '../../data/service/network_caller.dart';
 
 class PreferencesScreen extends StatefulWidget {
@@ -23,9 +24,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     _loadCustomerId();
   }
 
-  /// 🔹 Load saved customer ID from LocalStore
+  /// 🔹 Load valid customer ID from central session
   Future<void> _loadCustomerId() async {
-    final cid = await LocalStore.instance.getCustomerId();
+    final cid = await CustomerSessionHelper.getValidCustomerId();
     setState(() => _customerId = cid);
   }
 
@@ -33,15 +34,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
   Future<void> _savePreferences() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_customerId == null || _customerId!.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Customer ID not found — please login again',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return;
-    }
+    final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('preferences');
+    if (cid == null) return;
 
     setState(() => _isLoading = true);
 
@@ -51,7 +45,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
         url: "https://cleancloudapp.com/api/addMessage",
         body: {
           "api_token": "af547bb45f372a7b1171ba7a304fcd84ab319852",
-          "customerID": _customerId, // ✅ Correct key
+          "customerID": cid,
           "message": _notesController.text.trim(),
         },
       );

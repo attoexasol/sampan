@@ -23,6 +23,7 @@ class SignupController extends GetxController {
   final cityController = TextEditingController();
   final stateController = TextEditingController();
   final zipCodeController = TextEditingController();
+  final referralCodeController = TextEditingController();
 
   // -----------------------------------------------------
   // 🔑 FORM KEY & STATE
@@ -66,6 +67,13 @@ class SignupController extends GetxController {
     final addressLine =
         "${streetController.text.trim()}, ${cityController.text.trim()}, ${stateController.text.trim()}, ${zipCodeController.text.trim()}";
 
+    final referralCode = referralCodeController.text.trim();
+    if (referralCode.isEmpty) {
+      debugPrint('[Signup] referralCode empty or skipped');
+    } else {
+      debugPrint('[Signup] referralCode entered: $referralCode');
+    }
+
     final requestedBody = {
       "api_token": ApiConfig.apiToken,
       "customerName": fullName,
@@ -75,6 +83,9 @@ class SignupController extends GetxController {
       "customerAddress": addressLine,
       "customerNotes": "New customer registration from Sampan app",
     };
+    if (referralCode.isNotEmpty) {
+      requestedBody["referralCode"] = referralCode;
+    }
 
     isLoading.value = true;
 
@@ -86,7 +97,12 @@ class SignupController extends GetxController {
 
       if (response.isSuccess) {
         final body = response.body ?? {};
-        final customerId = body['CustomerID']?.toString() ?? '';
+        debugPrint('[Signup] account created successfully');
+        if (referralCode.isNotEmpty && (body['referralError'] != null || body['ReferralError'] != null)) {
+          debugPrint('[Signup] referral code may be invalid but signup succeeded');
+        }
+        // Registration returns "CustomerID": 3492; fallback to "cid" if present
+        final customerId = (body['CustomerID'] ?? body['cid'])?.toString().trim() ?? '';
         final email = emailController.text.trim();
         final phoneStr = phoneController.text.trim();
         // api_token is same for every user; customerID is per-user and used for all API calls
@@ -121,7 +137,13 @@ class SignupController extends GetxController {
           address: addressLine,
         );
 
-        _ok('Account created successfully!');
+        Get.snackbar(
+          'Success',
+          'Account created successfully',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
         _clearForm();
         Get.offAllNamed(Routes.HOME);
       } else {
@@ -158,6 +180,7 @@ class SignupController extends GetxController {
     cityController.clear();
     stateController.clear();
     zipCodeController.clear();
+    referralCodeController.clear();
   }
 
   // -----------------------------------------------------
@@ -183,6 +206,7 @@ class SignupController extends GetxController {
     cityController.dispose();
     stateController.dispose();
     zipCodeController.dispose();
+    referralCodeController.dispose();
     super.onClose();
   }
 

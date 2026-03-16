@@ -10,7 +10,6 @@ import '../widgets/order_summary_card_widget.dart';
 import '../widgets/header_widget.dart';
 import '../widgets/specialty_how_it_works_card.dart';
 import 'specialty_estimator_card.dart';
-import 'specialty_rush_service_card.dart';
 import 'specialty_special_instructions_card.dart';
 import 'specialty_schedule_delivery_card.dart';
 import 'specialty_disclaimers_card.dart';
@@ -66,9 +65,6 @@ class CommonSpecialtyServiceView extends StatelessWidget {
             ...products.map((product) => _buildProductCard(product, orderController)),
 
           SizedBox(height: AppSizes.xl),
-
-          const SpecialtyRushServiceCard(),
-          SizedBox(height: AppSizes.md),
 
           SpecialtyEstimatorCard(hintText: estimatorHintText),
           SizedBox(height: AppSizes.md),
@@ -286,7 +282,10 @@ class CommonSpecialtyServiceView extends StatelessWidget {
                   Get.to(
                     () => const ScheduleView(),
                     binding: ScheduleBinding(),
-                    arguments: {'orderSummary': orderCtrl.snapshot()},
+                    arguments: {
+                      'serviceType': 'specialty',
+                      'orderSummary': orderCtrl.snapshot(),
+                    },
                   );
                 }
               : null,

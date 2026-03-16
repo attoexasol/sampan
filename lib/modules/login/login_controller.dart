@@ -42,7 +42,8 @@ class LoginController extends GetxController {
       final body = response.body ?? {};
 
       if (response.isSuccess && body['Success'] == 'True') {
-        final customerId = body['cid']?.toString() ?? '';
+        // Login returns "cid": "3492"; fallback to "CustomerID" if present
+        final customerId = (body['cid'] ?? body['CustomerID'])?.toString().trim() ?? '';
 
         // Name: 1) from API, 2) from storage, 3) derive from email
         String nameToSave = 'User Name';
@@ -92,8 +93,13 @@ class LoginController extends GetxController {
           address: addressToSave,
         );
 
-        Get.snackbar('Success 🎉', 'Login successful!',
-            backgroundColor: Colors.green, colorText: Colors.white);
+        Get.snackbar(
+          'Success',
+          'Logged in successfully',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
 
         Get.offAllNamed(Routes.HOME);
       } else {

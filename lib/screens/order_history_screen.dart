@@ -1,13 +1,11 @@
-// lib/screens/order_history_screen.dart
+// Order History screen — fetches from CleanCloud API, shows All / Active / Completed
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import '../constants/colors.dart';
-import '../constants/sizes.dart';
-import '../data/models/order_history_model.dart';
-import '../data/service/local_store.dart';
-import '../widgets/order_summary_card_widget.dart';
-import '../widgets/header_widget.dart';
+import '../controller/order_history_controller.dart';
+import '../data/models/api_order_model.dart';
+import '../widgets/order_history_list_card.dart';
+import '../widgets/order_detail_bottom_sheet.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -17,209 +15,33 @@ class OrderHistoryScreen extends StatefulWidget {
 }
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
-  List<OrderHistoryItem> _orders = [];
-  bool _isLoading = true;
+  late final OrderHistoryController _ctrl;
 
   @override
   void initState() {
     super.initState();
-    _loadOrders();
-  }
-
-  Future<void> _loadOrders() async {
-    setState(() => _isLoading = true);
-
-    final orders = await LocalStore.instance.getOrderHistory();
-
-    setState(() {
-      _orders = orders;
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _deleteOrder(String orderId) async {
-    final confirm = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('Delete Order'),
-        content: const Text('Are you sure you want to remove this order from history?'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Get.back(result: true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await LocalStore.instance.deleteOrderFromHistory(orderId);
-      await _loadOrders();
-      Get.snackbar(
-        'Deleted',
-        'Order removed from history',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+    if (!Get.isRegistered<OrderHistoryController>()) {
+      Get.put(OrderHistoryController(), permanent: false);
     }
+    _ctrl = Get.find<OrderHistoryController>();
+    _ctrl.fetchOrders();
   }
 
-  void _showOrderDetails(OrderHistoryItem order) {
+  String _orderNumberFor(ApiOrder order, int indexInFilteredList) {
+    final date = order.displayDate ?? DateTime.now();
+    final list = _ctrl.filteredOrders;
+    final seq = (list.length - indexInFilteredList).toString().padLeft(3, '0');
+    return 'ORD-${date.year}-$seq';
+  }
+
+  void _showOrderDetail(ApiOrder order, String orderNumber) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(AppSizes.radiusLg),
-            topRight: Radius.circular(AppSizes.radiusLg),
-          ),
-        ),
-        child: Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: EdgeInsets.only(top: AppSizes.md),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            // Header
-            Padding(
-              padding: EdgeInsets.all(AppSizes.lg),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Order Details',
-                        style: TextStyle(
-                          fontSize: AppSizes.fontXxl,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.foreground,
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.xs),
-                      Row(
-                        children: [
-                          Icon(LucideIcons.package,
-                              size: AppSizes.iconSm, color: AppColors.primary),
-                          SizedBox(width: AppSizes.xs),
-                          Text(
-                            order.id,
-                            style: TextStyle(
-                              fontSize: AppSizes.fontMd,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
-                child: OrderSummaryCard(
-                  items: order.items,
-                  subTotal: order.subTotal,
-                  deliveryFee: order.deliveryFee,
-                  tax: order.tax,
-                  grandTotal: order.grandTotal,
-                  pickupDate: order.pickupDate,
-                  pickupTimeSlot: order.pickupTimeSlot,
-                  deliveryDate: order.deliveryDate,
-                  deliveryTimeSlot: order.deliveryTimeSlot,
-                  orderId: order.id,
-                  status: order.status,
-                  createdAt: order.createdAt,
-                  isHistoryCard: false,
-                  showBorder: true,
-                ),
-              ),
-            ),
-
-            // Bottom Actions
-            Container(
-              padding: EdgeInsets.all(AppSizes.lg),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _deleteOrder(order.id);
-                        },
-                        icon: Icon(Icons.delete_outline, color: Colors.red),
-                        label: Text('Delete', style: TextStyle(color: Colors.red)),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: AppSizes.md),
-                          side: BorderSide(color: Colors.red),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: AppSizes.md),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // TODO: Implement reorder functionality
-                          Get.snackbar(
-                            'Coming Soon',
-                            'Reorder feature will be available soon!',
-                            backgroundColor: AppColors.primary,
-                            colorText: Colors.white,
-                          );
-                        },
-                        icon: Icon(Icons.refresh, color: Colors.white),
-                        label: Text('Reorder', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          padding: EdgeInsets.symmetric(vertical: AppSizes.md),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+      builder: (context) => OrderDetailBottomSheet(
+        order: order,
+        orderNumber: orderNumber,
       ),
     );
   }
@@ -229,69 +51,125 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Order History'),
+        title: const Text(
+          'Order History',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primaryForeground,
+          ),
+        ),
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.primaryForeground,
         elevation: 0,
-        actions: [
-          if (_orders.isNotEmpty)
-            IconButton(
-              onPressed: _loadOrders,
-              icon: Icon(Icons.refresh),
-              tooltip: 'Refresh',
-            ),
+      ),
+      body: Column(
+        children: [
+          _buildTabs(),
+          Expanded(
+            child: Obx(() {
+              if (_ctrl.isLoading.value) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              if (_ctrl.fetchError.value != null) {
+                return _buildErrorState();
+              }
+              final list = _ctrl.filteredOrders;
+              if (list.isEmpty) {
+                return _buildEmptyState();
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                itemCount: list.length,
+                itemBuilder: (context, index) {
+                  final order = list[index];
+                  final orderNumber = _orderNumberFor(order, index);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: OrderHistoryListCard(
+                      order: order,
+                      orderNumber: orderNumber,
+                      onTap: () => _showOrderDetail(order, orderNumber),
+                    ),
+                  );
+                },
+              );
+            }),
+          ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _orders.isEmpty
-          ? _buildEmptyState()
-          : _buildOrderList(),
+    );
+  }
+
+  Widget _buildTabs() {
+    return Obx(() {
+      return Container(
+        color: AppColors.primary,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Row(
+          children: [
+            _tab(0, 'All'),
+            const SizedBox(width: 8),
+            _tab(1, 'Active'),
+            const SizedBox(width: 8),
+            _tab(2, 'Completed'),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _tab(int index, String label) {
+    final selected = _ctrl.selectedFilterIndex.value == index;
+    return Expanded(
+      child: Material(
+        color: selected ? Colors.white : Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: () => _ctrl.setFilterIndex(index),
+          borderRadius: BorderRadius.circular(10),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  color: selected ? AppColors.primary : AppColors.primaryForeground,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(AppSizes.xl),
+        padding: const EdgeInsets.all(32),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              LucideIcons.packageX,
-              size: 80,
-              color: Colors.grey.shade400,
+              Icons.receipt_long_outlined,
+              size: 64,
+              color: AppColors.mutedForeground.withOpacity(0.6),
             ),
-            SizedBox(height: AppSizes.lg),
+            const SizedBox(height: 16),
             Text(
-              'No Orders Yet',
+              'No orders found yet.',
               style: TextStyle(
-                fontSize: AppSizes.fontXxl,
-                fontWeight: FontWeight.bold,
-                color: AppColors.foreground,
-              ),
-            ),
-            SizedBox(height: AppSizes.sm),
-            Text(
-              'Your order history will appear here once you complete your first order.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: AppSizes.fontMd,
+                fontSize: 16,
                 color: AppColors.mutedForeground,
               ),
-            ),
-            SizedBox(height: AppSizes.xl),
-            ElevatedButton.icon(
-              onPressed: () => Get.offAllNamed('/'),
-              icon: Icon(Icons.shopping_bag_outlined, color: Colors.white),
-              label: Text('Start Shopping', style: TextStyle(color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.xl,
-                  vertical: AppSizes.md,
-                ),
-              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -299,261 +177,45 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     );
   }
 
-  Widget _buildOrderList() {
-    return RefreshIndicator(
-      onRefresh: _loadOrders,
-      child: ListView.builder(
-        padding: EdgeInsets.all(AppSizes.md),
-        itemCount: _orders.length,
-        itemBuilder: (context, index) {
-          final order = _orders[index];
-          return Padding(
-            padding: EdgeInsets.only(bottom: AppSizes.md),
-            child: _buildOrderHistoryCard(order),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildOrderHistoryCard(OrderHistoryItem order) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        child: InkWell(
-          onTap: () => _showOrderDetails(order),
-          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-          child: Padding(
-            padding: EdgeInsets.all(AppSizes.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Row with Order ID and Status
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(LucideIcons.package,
-                            size: AppSizes.iconSm, color: AppColors.primary),
-                        SizedBox(width: AppSizes.xs),
-                        Text(
-                          order.id,
-                          style: TextStyle(
-                            fontSize: AppSizes.fontMd,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    _buildStatusBadge(order.status),
-                  ],
-                ),
-
-                SizedBox(height: AppSizes.xs),
-                Text(
-                  _formatCreatedAt(order.createdAt),
-                  style: TextStyle(
-                    fontSize: AppSizes.fontSm,
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
-
-                Divider(height: AppSizes.lg),
-
-                // Schedule Info
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildScheduleInfo(
-                        icon: LucideIcons.truck,
-                        label: 'Pickup',
-                        value: order.formattedPickup,
-                        iconColor: AppColors.primary,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 40,
-                      color: AppColors.border,
-                    ),
-                    Expanded(
-                      child: _buildScheduleInfo(
-                        icon: LucideIcons.home,
-                        label: 'Delivery',
-                        value: order.formattedDelivery,
-                        iconColor: Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
-
-                Divider(height: AppSizes.lg),
-
-                // Items Summary
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${order.totalItemsCount} item${order.totalItemsCount > 1 ? 's' : ''}',
-                      style: TextStyle(
-                        fontSize: AppSizes.fontMd,
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                    Text(
-                      '\$${order.grandTotal.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: AppSizes.fontLg,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: AppSizes.sm),
-
-                // Tap for details
-                Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Tap for details',
-                        style: TextStyle(
-                          fontSize: AppSizes.fontSm,
-                          color: AppColors.mutedForeground,
-                        ),
-                      ),
-                      SizedBox(width: AppSizes.xs),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: AppColors.mutedForeground,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+  Widget _buildErrorState() {
+    final message = _ctrl.fetchError.value ?? 'Something went wrong.';
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 56,
+              color: AppColors.destructive,
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildScheduleInfo({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color iconColor,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: iconColor),
-              SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: AppSizes.fontSm,
-                  color: AppColors.mutedForeground,
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.mutedForeground,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => _ctrl.fetchOrders(),
+              icon: const Icon(Icons.refresh, size: 20),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: AppSizes.fontSm,
-              fontWeight: FontWeight.w600,
-              color: AppColors.foreground,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(String status) {
-    Color bgColor;
-    Color textColor;
-
-    switch (status.toLowerCase()) {
-      case 'completed':
-        bgColor = Colors.green.shade100;
-        textColor = Colors.green.shade700;
-        break;
-      case 'processing':
-        bgColor = Colors.blue.shade100;
-        textColor = Colors.blue.shade700;
-        break;
-      case 'cancelled':
-        bgColor = Colors.red.shade100;
-        textColor = Colors.red.shade700;
-        break;
-      default: // pending
-        bgColor = Colors.orange.shade100;
-        textColor = Colors.orange.shade700;
-    }
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.sm,
-        vertical: AppSizes.xs,
-      ),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(
-          fontSize: AppSizes.fontXs,
-          fontWeight: FontWeight.bold,
-          color: textColor,
+          ],
         ),
       ),
     );
-  }
-
-  String _formatCreatedAt(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
-      if (difference.inHours == 0) {
-        return '${difference.inMinutes} minutes ago';
-      }
-      return '${difference.inHours} hours ago';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
   }
 }

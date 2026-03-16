@@ -3,12 +3,42 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controller/products_controller.dart';
 import '../../controller/order_summary_controller.dart';
+import '../../data/models/subscription_state_model.dart';
+import '../../data/service/customer_session_helper.dart';
+import '../../data/service/local_store.dart';
 import '../../data/service/products_service.dart';
+import '../../data/service/subscription_service.dart';
+import '../../data/service/utils.dart';
 import '../../models/product_model.dart';
+
+/// Centralized customer ID validation. Treat null, empty, literal "null", whitespace as invalid.
+bool isInvalidCustomerId(String? id) {
+  if (id == null) return true;
+  final t = id.trim();
+  return t.isEmpty || t.toLowerCase() == 'null';
+}
+
+/// Result of tapping Dream Big Plan Add; UI shows message from context when not canContinue.
+enum DreamBigTapResult { canContinue, needLogin, alreadyActive }
 
 class LaundryController extends GetxController {
   final orderCtrl = Get.find<OrderSummaryController>();
   final productsCtrl = Get.find<ProductsController>();
+
+  /// Show snackbar only when Overlay is available to avoid "No Overlay widget found" crash.
+  void _safeSnackbar(String title, String message, {required bool isError}) {
+    if (Get.overlayContext == null) {
+      debugPrint('[DreamBig] _safeSnackbar skipped (no overlay): $title - $message');
+      return;
+    }
+    Get.snackbar(
+      title,
+      message,
+      backgroundColor: isError ? Colors.red : Colors.green,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
 
   // Loading states
   final isLoadingBulkyItems = false.obs;
@@ -20,6 +50,10 @@ class LaundryController extends GetxController {
   final isPremiumBagSelected = false.obs;
   final isSubscriptionSelected = false.obs;
   final isPayAsYouGoSelected = false.obs;
+
+  // Dream Big Plan: persisted state (restored on init, cleared when expired)
+  final dreamBigSubscription = Rx<SubscriptionStateModel?>(null);
+  final isSubscriptionProcessing = false.obs;
 
   // NOTE: Express service is now automatically detected based on pickup/delivery schedule
   // See ExpressDeliveryService for automatic express detection (delivery within 24h of pickup)
@@ -41,6 +75,7 @@ class LaundryController extends GetxController {
   void onInit() {
     super.onInit();
     loadBulkyItems();
+    restoreDreamBigPlanState();
     specialInstructionsController.addListener(() {
       specialInstructions.value = specialInstructionsController.text;
     });
@@ -112,10 +147,166 @@ class LaundryController extends GetxController {
     _updateOrderSummary(productsCtrl);
   }
 
-  /// Toggle Subscription service
+  /// Toggle Subscription service (legacy toggle; Dream Big uses Add flow)
   void toggleSubscription() {
     isSubscriptionSelected.value = !isSubscriptionSelected.value;
     _updateOrderSummary();
+  }
+
+  /// Restore Dream Big state from storage (pending or active). Clear if expired.
+  Future<void> restoreDreamBigPlanState() async {
+    final stored = await LocalStore.instance.getDreamBigSubscription();
+    dreamBigSubscription.value = stored;
+    dreamBigSubscription.refresh();
+    await expireDreamBigPlanIfNeeded();
+    if (dreamBigSubscription.value != null) {
+      isSubscriptionSelected.value = true;
+      _updateOrderSummary();
+    }
+  }
+
+  /// Clear expired active subscription; remove from summary if expired.
+  Future<void> expireDreamBigPlanIfNeeded() async {
+    final state = dreamBigSubscription.value;
+    if (state == null) return;
+    if (state.isActive && state.isExpired) {
+      await LocalStore.instance.clearDreamBigSubscription();
+      dreamBigSubscription.value = null;
+      dreamBigSubscription.refresh();
+      isSubscriptionSelected.value = false;
+      orderCtrl.items.remove('dream_big_plan');
+      _updateOrderSummary();
+    }
+  }
+
+  /// True if Dream Big Plan is active and not expired.
+  bool get isDreamBigPlanActive {
+    final state = dreamBigSubscription.value;
+    if (state == null) return false;
+    return state.isActive && !state.isExpired;
+  }
+
+  /// True if user tapped Add and payment not yet completed (show Inactive).
+  bool get isDreamBigPlanPending {
+    final state = dreamBigSubscription.value;
+    return state != null && state.isPending;
+  }
+
+  bool get shouldShowAdd => !isDreamBigPlanActive && !isDreamBigPlanPending;
+
+  /// Button label from state: Add | Inactive | Active
+  String get subscriptionButtonText {
+    if (isDreamBigPlanActive) return 'Active';
+    if (isDreamBigPlanPending) return 'Inactive';
+    return 'Add';
+  }
+
+  /// Called when user taps Dream Big Plan. Validates customer; does NOT show snackbar (no Overlay).
+  /// Returns canContinue only when customerId is valid; then UI may open payment dialog.
+  Future<DreamBigTapResult> onTapDreamBigPlan() async {
+    debugPrint('[DreamBig] onTapDreamBigPlan called');
+    if (isSubscriptionProcessing.value) {
+      debugPrint('[DreamBig] Early return: processing');
+      return DreamBigTapResult.needLogin;
+    }
+    if (isDreamBigPlanActive) {
+      debugPrint('[DreamBig] Early return: already active');
+      return DreamBigTapResult.alreadyActive;
+    }
+    final customerId = await CustomerSessionHelper.requireCustomerIdOrRedirect('dream-big-plan');
+    if (customerId == null) {
+      debugPrint('[DreamBig] Early return: no valid customer ID (snackbar + redirect)');
+      return DreamBigTapResult.needLogin;
+    }
+    debugPrint('[DreamBig] Validation passed; setting pending');
+    final pendingState = SubscriptionStateModel(
+      subscriptionId: SubscriptionConfig.dreamBigPlanId,
+      planName: SubscriptionConfig.dreamBigPlanName,
+      customerId: customerId,
+      price: SubscriptionConfig.dreamBigPlanPrice,
+      isActive: false,
+      isPending: true,
+      activatedAt: null,
+      expiresAt: null,
+    );
+    await LocalStore.instance.saveDreamBigSubscription(pendingState);
+    dreamBigSubscription.value = pendingState;
+    isSubscriptionSelected.value = true;
+    _updateOrderSummary();
+    debugPrint('[DreamBig] Pending state saved; button should show Inactive');
+    dreamBigSubscription.refresh();
+    return DreamBigTapResult.canContinue;
+  }
+
+  /// Call after payment succeeds: call CleanCloud addSubscription, then mark active or revert.
+  Future<void> onPaymentSuccess(String customerId) async {
+    if (isInvalidCustomerId(customerId)) {
+      debugPrint('[DreamBig] onPaymentSuccess skipped: invalid customerId');
+      return;
+    }
+    debugPrint('[DreamBig] onPaymentSuccess called for customerId=$customerId');
+    isSubscriptionProcessing.value = true;
+    try {
+      final ok = await SubscriptionService.addSubscription(customerId);
+      debugPrint('[DreamBig] addSubscription API result: $ok');
+      if (!ok) {
+        await onPaymentFailed();
+        _safeSnackbar(
+          'Subscription failed',
+          'Could not add plan. Please try again or contact support.',
+          isError: true,
+        );
+        return;
+      }
+      final now = DateTime.now();
+      final expiresAt = now.add(const Duration(days: 30));
+      final state = SubscriptionStateModel(
+        subscriptionId: SubscriptionConfig.dreamBigPlanId,
+        planName: SubscriptionConfig.dreamBigPlanName,
+        customerId: customerId,
+        price: SubscriptionConfig.dreamBigPlanPrice,
+        isActive: true,
+        isPending: false,
+        activatedAt: now,
+        expiresAt: expiresAt,
+      );
+      await LocalStore.instance.saveDreamBigSubscription(state);
+      dreamBigSubscription.value = state;
+      _updateOrderSummary();
+      debugPrint('[DreamBig] Active state saved; button should show Active');
+      dreamBigSubscription.refresh();
+      _safeSnackbar(
+        'Success',
+        'Dream Big Plan is now active for 30 days.',
+        isError: false,
+      );
+    } catch (e) {
+      debugPrint('[DreamBig] onPaymentSuccess error: $e');
+      await onPaymentFailed();
+      _safeSnackbar(
+        'Error',
+        e.toString().replaceAll('Exception: ', ''),
+        isError: true,
+      );
+    } finally {
+      isSubscriptionProcessing.value = false;
+    }
+  }
+
+  /// Call on payment fail or cancel: clear pending and remove from summary.
+  Future<void> onPaymentFailed() async {
+    debugPrint('[DreamBig] onPaymentFailed: reverting to Add');
+    await LocalStore.instance.clearDreamBigSubscription();
+    dreamBigSubscription.value = null;
+    dreamBigSubscription.refresh();
+    isSubscriptionSelected.value = false;
+    orderCtrl.items.remove('dream_big_plan');
+    _updateOrderSummary();
+  }
+
+  /// Legacy: activate after payment (used if card passes customerId after dialog success).
+  Future<void> activateDreamBigPlan(String customerId) async {
+    await onPaymentSuccess(customerId);
   }
 
   /// Toggle Pay As You Go service
@@ -178,8 +369,8 @@ class LaundryController extends GetxController {
       orderCtrl.items.remove('premium_bag');
     }
 
-    // Subscription
-    if (isSubscriptionSelected.value) {
+    // Subscription (legacy Green Bag Plus)
+    if (isSubscriptionSelected.value && dreamBigSubscription.value == null) {
       orderCtrl.updateItem(
         key: 'subscription',
         title: 'Green Bag Plus',
@@ -189,6 +380,20 @@ class LaundryController extends GetxController {
       );
     } else {
       orderCtrl.items.remove('subscription');
+    }
+
+    // Dream Big Plan: in summary when pending or active (not expired)
+    final dreamBig = dreamBigSubscription.value;
+    if (dreamBig != null && (!dreamBig.isExpired || dreamBig.isPending)) {
+      orderCtrl.updateItem(
+        key: 'dream_big_plan',
+        title: SubscriptionConfig.dreamBigPlanName,
+        subtitle: '4 bags per month',
+        price: SubscriptionConfig.dreamBigPlanPrice,
+        qty: 1,
+      );
+    } else {
+      orderCtrl.items.remove('dream_big_plan');
     }
 
     // Pay As You Go

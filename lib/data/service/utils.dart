@@ -3,12 +3,20 @@ class ApiConfig {
   static const String apiToken = 'af547bb45f372a7b1171ba7a304fcd84ab319852';
 }
 
-class Urls {
-  static const String _baseUrl = "https://cleancloudapp.com/api";
+/// Dream Big Plan subscription config (CleanCloud subscription ID and display).
+class SubscriptionConfig {
+  static const String dreamBigPlanId = '5483';
+  static const String dreamBigPlanName = 'Dream Big Plan';
+  static const double dreamBigPlanPrice = 69.0;
+}
 
-  // Auth
-   static const String accountCreate = "$_baseUrl/addCustomer";                                                   // Creadte user
-   static const String logInAcc = "$_baseUrl/loginCustomer";                                                      // LogIn
+class Urls {
+  static const String baseUrl = "https://cleancloudapp.com/api";
+  static const String _baseUrl = baseUrl;
+
+  // Auth — save CustomerID/cid from responses; used across the app for APIs
+   static const String accountCreate = "$_baseUrl/addCustomer";   // Response: "CustomerID": 3492
+   static const String logInAcc = "$_baseUrl/loginCustomer";      // Response: "cid": "3492"
    static const String PreferencesMsg = "$_baseUrl/addMessage";                                                   //
   static const String deleteCustomer = "$_baseUrl/deleteCustomer";
   static const String updateCustomerAddress = "$_baseUrl/updateCustomer";
@@ -31,6 +39,9 @@ class Urls {
    static const String StripePayment = "https://clean-cloud.attoexasolutions.com/create-payment-intent";
 
 
+   // Subscription
+   static const String addSubscription = "$baseUrl/addSubscription";
+   static const String getSubscriptions = "$baseUrl/getSubscription";
 
 // 1. Premium Bag Service
 // 2. Subscriptions

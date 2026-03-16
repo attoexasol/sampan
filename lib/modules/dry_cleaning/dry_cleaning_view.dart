@@ -11,7 +11,6 @@ import 'widgets/estimator_card.dart';
 import 'widgets/how_it_works_card.dart';
 import 'widgets/order_summary_card.dart';
 import 'widgets/pricing_info_card.dart';
-import 'widgets/rush_service_card.dart';
 import 'widgets/schedule_delivery_card.dart';
 import 'widgets/services_section.dart';
 import 'widgets/special_instructions_card.dart';
@@ -52,8 +51,6 @@ class DryCleaningView extends StatelessWidget {
                           const DryCleaningHowItWorksCard(),
                           SizedBox(height: AppSizes.md),
                           const DryCleaningServicesSection(),
-                          SizedBox(height: AppSizes.md),
-                          const RushServiceCard(),
                           SizedBox(height: AppSizes.md),
                           const EstimatorCard(),
                           SizedBox(height: AppSizes.md),
@@ -115,6 +112,7 @@ class DryCleaningView extends StatelessWidget {
                     () => const ScheduleView(),
                     binding: ScheduleBinding(),
                     arguments: {
+                      'serviceType': 'dry_cleaning',
                       'orderSummary': controller.getOrderSummarySnapshot(),
                     },
                   );

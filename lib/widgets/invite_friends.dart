@@ -1,72 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:sampan/widgets/your_wallet.dart';
+import 'package:sampan/constants/colors.dart';
+import 'package:sampan/data/models/referral_response_model.dart';
+import 'package:sampan/data/service/referral_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class InviteFriendsWidget {
-  static String referralCode = "EARNU15";
-  static String referralLink =
-      "https://play.google.com/store/apps/details?id=com.sampan.app?ref=$referralCode";
-  static String shareText =
-      "🎉 Join Sampan and earn \$15! Use my referral link: $referralLink";
+/// Builds share message with dynamic referral code only (no hardcoded code).
+String buildReferralShareMessage(ReferralResponseModel model) {
+  final code = model.referralCode;
+  return 'Try Sampan for laundry pickup and delivery. Use my referral code: $code.';
+}
 
-  /// ✅ Show Invite Dialog (AlertDialog version)
-  static void showInviteDialog(BuildContext context) {
+class InviteFriendsWidget {
+  /// Shows invite dialog. Requires valid [customerId]; caller should use CustomerSessionHelper.requireCustomerIdOrRedirect() first.
+  static void showInviteDialog(BuildContext context, {required String customerId}) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Expanded(
-              child: Text(
-                "Invite Friends & Earn \$15",
-                style: TextStyle(fontWeight: FontWeight.bold,),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.pop(context),
-            )
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              "Share Sampan with friends and you'll both get \$15 credit on your next order!",
-              style: TextStyle(color: Colors.grey,),
-            ),
-            const SizedBox(height: 20),
-            _inviteOption(
-              icon: FontAwesomeIcons.whatsapp,
-              title: "WhatsApp",
-              subtitle: "Share via WhatsApp",
-              onTap: () => _shareViaWhatsApp(context),
-            ),
-            _inviteOption(
-              icon: Icons.sms,
-              title: "Text Message",
-              subtitle: "Share via SMS",
-              onTap: () => _shareViaSMS(context),
-            ),
-            _inviteOption(
-              icon: Icons.email_outlined,
-              title: "Email",
-              subtitle: "Share via Email",
-              onTap: () => _shareViaEmail(context),
-            ),
-            _inviteOption(
-              icon: Icons.link,
-              title: "Copy Link",
-              subtitle: "Copy referral message",
-              onTap: () => _copyReferralLink(context),
-            ),
-          ],
-        ),
-      ),
+      barrierDismissible: false,
+      builder: (_) => _InviteFriendsDialog(customerId: customerId),
     );
   }
 
@@ -74,42 +26,233 @@ class InviteFriendsWidget {
     required IconData icon,
     required String title,
     required String subtitle,
-    required Function() onTap,
+    required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, size: 28, color: Colors.green),
+      leading: Icon(icon, size: 28, color: AppColors.primary),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
       subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
       trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
       onTap: onTap,
     );
   }
+}
 
-  /// ✅ Share Methods + Reward Popup
-  static Future<void> _shareViaWhatsApp(BuildContext context) async {
-    final url = Uri.parse("https://wa.me/?text=${Uri.encodeComponent(shareText)}");
-    await launchUrl(url, mode: LaunchMode.externalApplication);
-    Navigator.pop(context);
-    YourWalletWidget.addReward(context, 15);
+class _InviteFriendsDialog extends StatefulWidget {
+  final String customerId;
+
+  const _InviteFriendsDialog({required this.customerId});
+
+  @override
+  State<_InviteFriendsDialog> createState() => _InviteFriendsDialogState();
+}
+
+class _InviteFriendsDialogState extends State<_InviteFriendsDialog> {
+  ReferralResponseModel? _referral;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReferral();
   }
 
-  static Future<void> _shareViaSMS(BuildContext context) async {
-    final url = Uri.parse("sms:?body=${Uri.encodeComponent(shareText)}");
-    await launchUrl(url);
-    Navigator.pop(context);
-    YourWalletWidget.addReward(context, 15);
+  Future<void> _fetchReferral() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final model = await ReferralService.fetchReferral(widget.customerId);
+      if (!mounted) return;
+      if (model == null || !model.isSuccess || !model.hasValidCode) {
+        setState(() {
+          _loading = false;
+          _error = 'Could not load referral. Please try again.';
+          _referral = null;
+        });
+        return;
+      }
+      setState(() {
+        _referral = model;
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Something went wrong. Please try again.';
+        _referral = null;
+      });
+    }
   }
 
-  static Future<void> _shareViaEmail(BuildContext context) async {
-    final url = Uri.parse("mailto:?subject=Join Sampan & Earn!&body=$shareText");
-    await launchUrl(url);
-    Navigator.pop(context);
-    YourWalletWidget.addReward(context, 15);
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              _loading || _referral == null
+                  ? 'Invite Friends & Earn'
+                  : 'Invite Friends & Earn ${_referral!.existingCustomerRewardText}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+      content: _buildContent(),
+    );
   }
 
-  static void _copyReferralLink(BuildContext context) {
-    Fluttertoast.showToast(msg: "Referral link copied!");
+  Widget _buildContent() {
+    if (_loading) {
+      return const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_error != null) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _error!,
+            style: TextStyle(color: AppColors.mutedForeground),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _fetchReferral,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+          ),
+        ],
+      );
+    }
+    final model = _referral!;
+    final shareMessage = buildReferralShareMessage(model);
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Share Sampan with friends and earn ${model.existingCustomerRewardText} credit when they join using your referral code.',
+            style: TextStyle(color: AppColors.mutedForeground, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your referral code: ${model.referralCode}',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 20),
+          InviteFriendsWidget._inviteOption(
+            icon: FontAwesomeIcons.whatsapp,
+            title: 'WhatsApp',
+            subtitle: 'Share via WhatsApp',
+            onTap: () => _shareViaWhatsApp(context, shareMessage),
+          ),
+          InviteFriendsWidget._inviteOption(
+            icon: Icons.sms,
+            title: 'Text Message',
+            subtitle: 'Share via SMS',
+            onTap: () => _shareViaSMS(context, shareMessage),
+          ),
+          InviteFriendsWidget._inviteOption(
+            icon: Icons.email_outlined,
+            title: 'Email',
+            subtitle: 'Share via Email',
+            onTap: () => _shareViaEmail(context, shareMessage),
+          ),
+          InviteFriendsWidget._inviteOption(
+            icon: Icons.link,
+            title: 'Copy Link',
+            subtitle: 'Copy referral message',
+            onTap: () => _copyReferralMessage(context, shareMessage),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _shareViaWhatsApp(BuildContext context, String message) async {
+    try {
+      final url = Uri.parse(
+        'https://wa.me/?text=${Uri.encodeComponent(message)}',
+      );
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+        if (context.mounted) Navigator.pop(context);
+      } else {
+        if (context.mounted) _showShareFeedback(context, 'Could not open WhatsApp');
+      }
+    } catch (e) {
+      if (context.mounted) _showShareFeedback(context, 'Share failed');
+    }
+  }
+
+  Future<void> _shareViaSMS(BuildContext context, String message) async {
+    try {
+      final url = Uri.parse('sms:?body=${Uri.encodeComponent(message)}');
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+        if (context.mounted) Navigator.pop(context);
+      } else {
+        if (context.mounted) _showShareFeedback(context, 'Could not open Messages');
+      }
+    } catch (e) {
+      if (context.mounted) _showShareFeedback(context, 'Share failed');
+    }
+  }
+
+  Future<void> _shareViaEmail(BuildContext context, String message) async {
+    try {
+      final url = Uri.parse(
+        'mailto:?subject=Try Sampan Laundry&body=${Uri.encodeComponent(message)}',
+      );
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+        if (context.mounted) Navigator.pop(context);
+      } else {
+        if (context.mounted) _showShareFeedback(context, 'Could not open Email');
+      }
+    } catch (e) {
+      if (context.mounted) _showShareFeedback(context, 'Share failed');
+    }
+  }
+
+  void _copyReferralMessage(BuildContext context, String message) {
+    Clipboard.setData(ClipboardData(text: message));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Referral message copied!'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
     Navigator.pop(context);
-    YourWalletWidget.addReward(context, 15);
+  }
+
+  void _showShareFeedback(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }

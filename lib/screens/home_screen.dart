@@ -206,42 +206,45 @@ class _BookScreenState extends State<BookScreen> {
                     ),
                     SizedBox(height: AppSizes.md),
 
-                    // Laundry & Dry Cleaning
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Obx(() {
-                            final productsCtrl = Get.find<ProductsController>();
-                            final price = productsCtrl.eliteExpressBagPrice.value;
-                            final bagText = price > 0
-                                ? '\$${price.toStringAsFixed(0)}/bag'
-                                : '\$69/bag';
-                            return ServiceCard(
-                              icon: LucideIcons.shirt,
-                              title: 'Laundry',
-                              subtitle: '\$2.25/lb or $bagText',
+                    // Laundry & Dry Cleaning — equal height, responsive
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: Obx(() {
+                              final productsCtrl = Get.find<ProductsController>();
+                              final price = productsCtrl.eliteExpressBagPrice.value;
+                              final bagText = price > 0
+                                  ? '\$${price.toStringAsFixed(0)}/bag'
+                                  : '\$69/bag';
+                              return ServiceCard(
+                                icon: LucideIcons.shirt,
+                                title: 'Laundry',
+                                subtitle: '\$2.25/lb or $bagText',
+                                isSelected: false,
+                                onTap: () => Get.to(
+                                  () => const LaundryView(),
+                                  binding: LaundryBinding(),
+                                ),
+                              );
+                            }),
+                          ),
+                          SizedBox(width: AppSizes.md),
+                          Expanded(
+                            child: ServiceCard(
+                              icon: LucideIcons.wind,
+                              title: 'Dry Cleaning',
+                              subtitle: 'Professional Care',
                               isSelected: false,
                               onTap: () => Get.to(
-                                () => const LaundryView(),
-                                binding: LaundryBinding(),
+                                () => const DryCleaningView(),
+                                binding: DryCleaningBinding(),
                               ),
-                            );
-                          }),
-                        ),
-                        SizedBox(width: AppSizes.md),
-                        Expanded(
-                          child: ServiceCard(
-                            icon: LucideIcons.wind,
-                            title: 'Dry Cleaning',
-                            subtitle: 'Professional Care',
-                            isSelected: false,
-                            onTap: () => Get.to(
-                              () => const DryCleaningView(),
-                              binding: DryCleaningBinding(),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     SizedBox(height: AppSizes.xl),
 

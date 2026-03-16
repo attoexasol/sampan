@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/service/local_store.dart';
+import '../../data/service/customer_session_helper.dart';
 import '../../data/service/network_caller.dart';
 import '../../constants/colors.dart';
 
@@ -35,16 +36,16 @@ class _PaymentMethodsDialogState extends State<PaymentMethodsDialog> {
   }
 
   Future<void> _initLoad() async {
-    // 1) load saved customer id
-    final cid = await LocalStore.instance.getCustomerId();
+    // 1) Load valid customer ID from central session (null if not signed in)
+    final cid = await CustomerSessionHelper.getValidCustomerId();
     setState(() => _customerId = cid);
 
-    // 2) load locally saved payments first (instant UI)
+    // 2) Load locally saved payments first (instant UI)
     final local = await LocalStore.instance.getPaymentMethods();
     setState(() => _payments = local);
 
-    // 3) then fetch from server (if cid exists) and persist
-    if (cid != null && cid.isNotEmpty) {
+    // 3) Fetch from server if we have a valid session
+    if (cid != null) {
       await _fetchPayments();
     }
   }

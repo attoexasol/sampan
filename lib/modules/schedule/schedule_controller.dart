@@ -340,8 +340,10 @@ import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
 import '../../data/models/order_history_model.dart';
 import '../../data/service/network_caller.dart';
 import '../../data/service/local_store.dart';
+import '../../data/service/customer_session_helper.dart';
 import '../../data/service/utils.dart';
 import '../../data/service/express_delivery_service.dart';
+import '../../data/service/rush_order_service.dart';
 import '../../controller/order_summary_controller.dart';
 
 
@@ -362,11 +364,13 @@ class ScheduleController extends GetxController {
   final isLoading = false.obs;
   final serviceType = ''.obs;
 
-  // EXPRESS DELIVERY STATE
+  // EXPRESS / RUSH DELIVERY STATE
   final isExpressDelivery = false.obs;
+  final isRushDelivery = false.obs;
   final isValidDeliveryGap = true.obs;
   final deliveryDurationHours = Rx<double?>(null);
   final expressDeliveryMessage = ''.obs;
+  final rushServiceType = Rx<RushServiceType>(RushServiceType.unknown);
 
   // ORDER SUMMARY DATA
   final orderSummaryData = <String, dynamic>{}.obs;
@@ -388,7 +392,8 @@ class ScheduleController extends GetxController {
       if (Get.arguments is Map<String, dynamic>) {
         final args = Get.arguments as Map<String, dynamic>;
 
-        serviceType.value = args['serviceType'] ?? '';
+        serviceType.value = args['serviceType']?.toString() ?? '';
+        rushServiceType.value = RushOrderService.instance.serviceTypeFromString(serviceType.value);
 
         if (args.containsKey('orderSummary')) {
           orderSummaryData.value = args['orderSummary'];
@@ -428,30 +433,50 @@ class ScheduleController extends GetxController {
 
   bool get hasOrderSummary => orderItems.isNotEmpty;
 
-  /// Grand total including express fee if applicable
+  /// Grand total: use OrderSummaryController when registered (includes rush 2x and express fee)
   double get grandTotal {
+    if (Get.isRegistered<OrderSummaryController>()) {
+      try {
+        return Get.find<OrderSummaryController>().grandTotal;
+      } catch (_) {}
+    }
     double baseTotal = (orderTotals['grandTotal'] as num?)?.toDouble() ?? 0.0;
-    
-    // If express delivery, recalculate with express fee
-    if (isExpressDelivery.value) {
+    if (isExpressDelivery.value && !isRushDelivery.value) {
       final subtotal = (orderTotals['subTotal'] as num?)?.toDouble() ?? 0.0;
       final deliveryFee = (orderTotals['deliveryFee'] as num?)?.toDouble() ?? 0.0;
       final tax = (orderTotals['tax'] as num?)?.toDouble() ?? 0.0;
-      final expFee = expressFee;
-      
-      return subtotal + deliveryFee + expFee + tax;
+      return subtotal + deliveryFee + expressFee + tax;
     }
-    
+    if (isRushDelivery.value) {
+      final baseSub = (orderTotals['subTotal'] as num?)?.toDouble() ?? 0.0;
+      final subtotal = baseSub * RushOrderService.rushPriceMultiplier;
+      final deliveryFee = (orderTotals['deliveryFee'] as num?)?.toDouble() ?? 0.0;
+      final tax = subtotal * 0.05;
+      return subtotal + deliveryFee + tax;
+    }
     return baseTotal;
   }
 
-  /// Get order totals with express fee included
+  /// Get order totals with express/rush included
   Map<String, dynamic> get orderTotalsWithExpress {
     final totals = Map<String, dynamic>.from(orderTotals);
     totals['expressFee'] = expressFee;
     totals['isExpressDelivery'] = isExpressDelivery.value;
+    totals['isRushDelivery'] = isRushDelivery.value;
     totals['grandTotal'] = grandTotal;
     return totals;
+  }
+
+  /// Whether the given delivery slot qualifies as Rush for current service (for slot UI)
+  bool isDeliverySlotRush(String deliveryTimeSlot) {
+    final result = RushOrderService.instance.evaluateDeliverySlot(
+      serviceType: rushServiceType.value,
+      pickupDate: selectedPickupDate.value,
+      pickupTimeSlot: selectedPickupTimeSlot.value,
+      deliveryDate: selectedDeliveryDate.value,
+      deliveryTimeSlot: deliveryTimeSlot,
+    );
+    return result.isRush;
   }
 
   @override
@@ -495,54 +520,62 @@ class ScheduleController extends GetxController {
     return result.isValidGap;
   }
 
-  /// Update express delivery state based on current selection
+  /// Update rush and express delivery state based on current selection
   void _updateExpressDeliveryState() {
-    final result = ExpressDeliveryService.instance.checkExpressDelivery(
+    final rushType = rushServiceType.value;
+    final rushResult = RushOrderService.instance.evaluateDeliverySlot(
+      serviceType: rushType,
       pickupDate: selectedPickupDate.value,
       pickupTimeSlot: selectedPickupTimeSlot.value,
       deliveryDate: selectedDeliveryDate.value,
       deliveryTimeSlot: selectedDeliveryTimeSlot.value,
     );
-    
-    isExpressDelivery.value = result.isExpress;
-    isValidDeliveryGap.value = result.isValidGap;
-    deliveryDurationHours.value = result.durationHours;
-    expressDeliveryMessage.value = result.message ?? '';
-    
-    // Update OrderSummaryController if registered
+    final expressResult = ExpressDeliveryService.instance.checkExpressDelivery(
+      pickupDate: selectedPickupDate.value,
+      pickupTimeSlot: selectedPickupTimeSlot.value,
+      deliveryDate: selectedDeliveryDate.value,
+      deliveryTimeSlot: selectedDeliveryTimeSlot.value,
+    );
+
+    isValidDeliveryGap.value = rushResult.isValidGap && expressResult.isValidGap;
+    deliveryDurationHours.value = rushResult.durationHours ?? expressResult.durationHours;
+    isRushDelivery.value = rushResult.isRush;
+    isExpressDelivery.value = !rushResult.isRush && expressResult.isExpress;
+    expressDeliveryMessage.value = rushResult.isRush
+        ? 'Rush: ${rushResult.durationHours?.toStringAsFixed(1) ?? '?'}h turnaround'
+        : (expressResult.message ?? '');
+
     if (Get.isRegistered<OrderSummaryController>()) {
       try {
         final orderCtrl = Get.find<OrderSummaryController>();
-        orderCtrl.setExpressDelivery(
+        orderCtrl.setRushAndExpressDelivery(
+          serviceType: serviceType.value,
           pickupDate: selectedPickupDate.value,
           pickupTimeSlot: selectedPickupTimeSlot.value,
           deliveryDate: selectedDeliveryDate.value,
           deliveryTimeSlot: selectedDeliveryTimeSlot.value,
         );
       } catch (e) {
-        debugPrint('Warning: Could not update OrderSummaryController express state: $e');
+        debugPrint('Warning: Could not update OrderSummaryController: $e');
       }
     }
-    
-    debugPrint('📦 Express Delivery: isExpress=${result.isExpress}, '
-        'isValidGap=${result.isValidGap}, '
-        'duration=${result.durationHours?.toStringAsFixed(1)}h');
+
+    debugPrint('📦 Rush=${rushResult.isRush} Express=${isExpressDelivery.value} '
+        'isValidGap=${isValidDeliveryGap.value} duration=${deliveryDurationHours.value}');
   }
 
-  /// Get express fee based on current order
+  /// Get express fee (0 when Rush; otherwise 5% of base subtotal if express)
   double get expressFee {
+    if (isRushDelivery.value) return 0.0;
     if (!isExpressDelivery.value) return 0.0;
-    
-    // Get subtotal from orderTotals or OrderSummaryController
-    double subtotal = (orderTotals['subTotal'] as num?)?.toDouble() ?? 0.0;
-    
-    if (subtotal == 0 && Get.isRegistered<OrderSummaryController>()) {
+    double baseSub = 0.0;
+    if (Get.isRegistered<OrderSummaryController>()) {
       try {
-        subtotal = Get.find<OrderSummaryController>().subTotal;
+        baseSub = Get.find<OrderSummaryController>().baseSubTotal;
       } catch (_) {}
     }
-    
-    return ExpressDeliveryService.instance.calculateExpressFee(subtotal, true);
+    if (baseSub == 0) baseSub = (orderTotals['subTotal'] as num?)?.toDouble() ?? 0.0;
+    return ExpressDeliveryService.instance.calculateExpressFee(baseSub, true);
   }
 
   /// Check if checkout can proceed (valid gap)
@@ -645,10 +678,8 @@ class ScheduleController extends GetxController {
     isLoading.value = true;
 
     try {
-      final customerId = await LocalStore.instance.getCustomerId();
-      if (customerId == null || customerId.isEmpty) {
-        Get.snackbar('Error', 'Please login first',
-            backgroundColor: Colors.red, colorText: Colors.white);
+      final customerId = await CustomerSessionHelper.requireCustomerIdOrRedirect('place-order');
+      if (customerId == null) {
         isLoading.value = false;
         return;
       }

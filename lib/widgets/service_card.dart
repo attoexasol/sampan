@@ -43,19 +43,23 @@ class ServiceCard extends StatelessWidget {
           ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Icon and
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLighter,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: AppColors.primary,
-                size: 32,
+            // Icon (centered)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLighter,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary,
+                  size: 32,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -63,6 +67,7 @@ class ServiceCard extends StatelessWidget {
             // Title
             Text(
               title,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -71,15 +76,19 @@ class ServiceCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Subtitle/Price
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+            // Subtitle/Price - flexible area so cards stay equal height when side-by-side
+            Flexible(
+              child: Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
