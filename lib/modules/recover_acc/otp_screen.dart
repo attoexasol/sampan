@@ -4,11 +4,8 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import '../../widgets/header_widget.dart';
 import 'change_pass.dart';
 
-
 class OtpScreen extends StatelessWidget {
   OtpScreen({super.key});
-
-  final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _otpTEcontroller = TextEditingController();
 
@@ -33,7 +30,6 @@ class OtpScreen extends StatelessWidget {
                         const Text("6 digit OTP has send to your email", style: TextStyle(color: Colors.black87, fontSize: 13,),),
                         const SizedBox(height: 20),
 
-                        // Email Field
                         PinCodeTextField(
                           length: 6,
                           keyboardType: TextInputType.number,
@@ -54,7 +50,6 @@ class OtpScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
 
-                        // Submit Button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -65,7 +60,7 @@ class OtpScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-        
+
                 const SizedBox(height: 40),
               ],
             ),
@@ -75,7 +70,7 @@ class OtpScreen extends StatelessWidget {
     );
   }
 
-   _submitButton(BuildContext context) {
+   void _submitButton(BuildContext context) {
     Get.to(() => ChangePassword());
   }
 

@@ -17,8 +17,7 @@ class CustomerSessionHelper {
 
   /// When an API or screen action requires a customer ID:
   /// - If a valid ID exists, returns it (trimmed string).
-  /// - If missing/null/empty/"null": shows snackbar "Please Sign In / Sign Up first",
-  ///   navigates to Sign In screen, and returns null.
+  /// - If missing/null/empty/"null": shows snackbar, navigates to Sign In screen, and returns null.
   /// Call sites must abort the operation when null is returned.
   /// [featureName] is used for [AuthGuard] debug logs only.
   static Future<String?> requireCustomerIdOrRedirect([String? featureName]) async {
@@ -32,8 +31,8 @@ class CustomerSessionHelper {
     debugPrint('[AuthGuard] Missing customerId. Redirecting to Sign In.');
     if (Get.overlayContext != null) {
       Get.snackbar(
-        'Sign in required',
-        'Please Sign In / Sign Up first',
+        '',
+        'Please log in or register..',
         backgroundColor: Colors.red,
         colorText: Colors.white,
         snackPosition: SnackPosition.BOTTOM,

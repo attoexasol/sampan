@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sampan/data/service/network_caller.dart';
 import 'package:sampan/data/service/local_store.dart';
+import 'package:sampan/data/service/safe_snackbar.dart';
 import 'package:sampan/data/models/user_profile.dart';
-import '../../data/service/utils.dart';
-import '../../routes/app_routes.dart';
-import '../../controller/profile_controller.dart';
+import 'package:sampan/data/service/utils.dart';
+import 'package:sampan/routes/app_routes.dart';
+import 'package:sampan/controller/profile_controller.dart';
+import 'package:sampan/screens/home_screen.dart';
+import 'package:sampan/services/auth/google_auth_service.dart';
 import '../login/login_binding.dart';
 import '../login/login_view.dart';
 
 class SignupController extends GetxController {
-  // -----------------------------------------------------
-  // 🧱 TEXT CONTROLLERS
-  // -----------------------------------------------------
   final firstNameController = TextEditingController();
   final lastNameController = TextEditingController();
   final emailController = TextEditingController();
@@ -25,26 +25,38 @@ class SignupController extends GetxController {
   final zipCodeController = TextEditingController();
   final referralCodeController = TextEditingController();
 
-  // -----------------------------------------------------
-  // 🔑 FORM KEY & STATE
-  // -----------------------------------------------------
   final formKey = GlobalKey<FormState>();
   final isLoading = false.obs;
   final obscurePassword = true.obs;
   final obscureConfirmPassword = true.obs;
 
-  // -----------------------------------------------------
-  // 👁️ PASSWORD VISIBILITY TOGGLE
-  // -----------------------------------------------------
-  void togglePasswordVisibility() =>
-      obscurePassword.value = !obscurePassword.value;
+  void togglePasswordVisibility() => obscurePassword.value = !obscurePassword.value;
+  void toggleConfirmPasswordVisibility() => obscureConfirmPassword.value = !obscureConfirmPassword.value;
 
-  void toggleConfirmPasswordVisibility() =>
-      obscureConfirmPassword.value = !obscureConfirmPassword.value;
+  /// Same Firebase Google flow as [LoginController.loginWithGoogle]; used from signup screen.
+  Future<void> signupWithGoogle() async {
+    if (isLoading.value) return;
+    isLoading.value = true;
+    try {
+      final result = await GoogleAuthService.instance.signInWithGoogle();
+      if (!result.success && result.message.isEmpty) return;
+      if (!result.success) {
+        _err(result.message);
+        return;
+      }
 
-  // -----------------------------------------------------
-  // 🚀 SIGNUP FUNCTION
-  // -----------------------------------------------------
+      // TODO(backend): Send Firebase ID token ([result.idToken]) to your API.
+      // TODO(backend): Backend verifies token and links or creates CleanCloud customer; then persist session like [signup()].
+
+      SafeSnackbar.show('Google', result.message, isError: false);
+      Get.offAll(() => const HomeScreen());
+    } catch (e) {
+      _err(e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<void> signup() async {
     if (!formKey.currentState!.validate()) {
       _err('Please fill in all required fields');
@@ -62,29 +74,22 @@ class SignupController extends GetxController {
     }
 
     final fullName =
-    "${firstNameController.text.trim()} ${lastNameController.text.trim()}".trim();
-
+        '${firstNameController.text.trim()} ${lastNameController.text.trim()}'.trim();
     final addressLine =
-        "${streetController.text.trim()}, ${cityController.text.trim()}, ${stateController.text.trim()}, ${zipCodeController.text.trim()}";
-
+        '${streetController.text.trim()}, ${cityController.text.trim()}, ${stateController.text.trim()}, ${zipCodeController.text.trim()}';
     final referralCode = referralCodeController.text.trim();
-    if (referralCode.isEmpty) {
-      debugPrint('[Signup] referralCode empty or skipped');
-    } else {
-      debugPrint('[Signup] referralCode entered: $referralCode');
-    }
 
-    final requestedBody = {
-      "api_token": ApiConfig.apiToken,
-      "customerName": fullName,
-      "customerTel": phoneController.text.trim(),
-      "customerEmail": emailController.text.trim(),
-      "customerPassword": passwordController.text,
-      "customerAddress": addressLine,
-      "customerNotes": "New customer registration from Sampan app",
+    final requestedBody = <String, dynamic>{
+      'api_token': ApiConfig.apiToken,
+      'customerName': fullName,
+      'customerTel': phoneController.text.trim(),
+      'customerEmail': emailController.text.trim(),
+      'customerPassword': passwordController.text,
+      'customerAddress': addressLine,
+      'customerNotes': 'New customer registration from Sampan app',
     };
     if (referralCode.isNotEmpty) {
-      requestedBody["referralCode"] = referralCode;
+      requestedBody['promoCode'] = referralCode;
     }
 
     isLoading.value = true;
@@ -95,38 +100,58 @@ class SignupController extends GetxController {
         body: requestedBody,
       );
 
-      if (response.isSuccess) {
-        final body = response.body ?? {};
-        debugPrint('[Signup] account created successfully');
-        if (referralCode.isNotEmpty && (body['referralError'] != null || body['ReferralError'] != null)) {
-          debugPrint('[Signup] referral code may be invalid but signup succeeded');
+      final body = response.body ?? {};
+      final errorMsg = body['Error']?.toString().trim();
+      final hasErrorInBody = errorMsg != null && errorMsg.isNotEmpty;
+
+      if (hasErrorInBody) {
+        debugPrint('[Signup] API returned error: $errorMsg');
+        final isEmailExists = errorMsg.toLowerCase().contains('already exists');
+        if (isEmailExists) {
+          debugPrint('[Signup] Email already exists');
+          _err('An account already exists with this email. Please sign in instead.');
+        } else {
+          _err(errorMsg);
         }
-        // Registration returns "CustomerID": 3492; fallback to "cid" if present
-        final customerId = (body['CustomerID'] ?? body['cid'])?.toString().trim() ?? '';
-        final email = emailController.text.trim();
-        final phoneStr = phoneController.text.trim();
-        // api_token is same for every user; customerID is per-user and used for all API calls
-        await LocalStore.instance.saveSession(
-          customerId: customerId,
-          apiToken: ApiConfig.apiToken,
-          name: fullName,
-          email: email,
-          phone: phoneStr,
-          address: addressLine,
-          instructions: '',
-        );
+        return;
+      }
 
-        await LocalStore.instance.saveCustomerIdFromResponse(body);
-        final profile = UserProfile(
-          fullName: fullName,
-          email: email,
-          phone: phoneStr,
-          address: addressLine,
-          name: fullName,
-        );
-        await LocalStore.instance.saveUserProfile(profile);
-        await LocalStore.instance.setLoggedIn(true);
+      final customerId =
+          (body['CustomerID'] ?? body['cid'])?.toString().trim() ?? '';
+      debugPrint('[CustomerSession] signup returned CustomerID: $customerId');
+      final isSuccess = response.isSuccess &&
+          (body['Success'] == 'True' || body['Success'] == true || customerId.isNotEmpty);
 
+      if (!isSuccess || customerId.isEmpty) {
+        _err(response.errorMessage ?? 'Signup failed. Please try again.');
+        return;
+      }
+
+      debugPrint('[Signup] Account created successfully');
+      final email = emailController.text.trim();
+      final phoneStr = phoneController.text.trim();
+
+      await LocalStore.instance.saveSession(
+        customerId: customerId,
+        apiToken: ApiConfig.apiToken,
+        name: fullName,
+        email: email,
+        phone: phoneStr,
+        address: addressLine,
+        instructions: '',
+      );
+      await LocalStore.instance.saveCustomerIdFromResponse(body);
+      final profile = UserProfile(
+        fullName: fullName,
+        email: email,
+        phone: phoneStr,
+        address: addressLine,
+        name: fullName,
+      );
+      await LocalStore.instance.saveUserProfile(profile);
+      await LocalStore.instance.setLoggedIn(true);
+
+      if (Get.isRegistered<ProfileController>()) {
         final session = Get.find<ProfileController>();
         await session.setSession(
           name: fullName,
@@ -136,19 +161,12 @@ class SignupController extends GetxController {
           phone: phoneStr,
           address: addressLine,
         );
-
-        Get.snackbar(
-          'Success',
-          'Account created successfully',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        _clearForm();
-        Get.offAllNamed(Routes.HOME);
-      } else {
-        _err(response.errorMessage ?? 'Signup failed. Please try again.');
       }
+
+      debugPrint('[Signup] Showing safe snackbar');
+      SafeSnackbar.show('Success', 'Account created successfully', isError: false);
+      _clearForm();
+      Get.offAllNamed(Routes.HOME);
     } catch (e) {
       _err(e.toString());
     } finally {
@@ -157,18 +175,11 @@ class SignupController extends GetxController {
   }
 
   String? validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please confirm your password';
-    }
-    if (value != passwordController.text) {
-      return 'Passwords do not match';
-    }
+    if (value == null || value.isEmpty) return 'Please confirm your password';
+    if (value != passwordController.text) return 'Passwords do not match';
     return null;
   }
 
-  // -----------------------------------------------------
-  // 🧼 CLEAR FORM
-  // -----------------------------------------------------
   void _clearForm() {
     firstNameController.clear();
     lastNameController.clear();
@@ -183,17 +194,11 @@ class SignupController extends GetxController {
     referralCodeController.clear();
   }
 
-  // -----------------------------------------------------
-  // 🔁 NAVIGATION
-  // -----------------------------------------------------
-  void navigateToLogin() =>
-      Get.to(() => const LoginView(), binding: LoginBinding());
+  void navigateToLogin() => Get.to(() => const LoginView(), binding: LoginBinding());
 
-  void navigateToHome() => Get.offAllNamed(Routes.HOME);
+  void _err(String msg) =>
+      SafeSnackbar.show('Error', msg, isError: true);
 
-  // -----------------------------------------------------
-  // 🧹 CLEANUP (Dispose controllers properly)
-  // -----------------------------------------------------
   @override
   void onClose() {
     firstNameController.dispose();
@@ -209,23 +214,4 @@ class SignupController extends GetxController {
     referralCodeController.dispose();
     super.onClose();
   }
-
-  // -----------------------------------------------------
-  // ✅ FEEDBACK HELPERS
-  // -----------------------------------------------------
-  void _ok(String msg) => Get.snackbar(
-    'Success 🎉',
-    msg,
-    backgroundColor: Colors.green,
-    colorText: Colors.white,
-    snackPosition: SnackPosition.BOTTOM,
-  );
-
-  void _err(String msg) => Get.snackbar(
-    'Error',
-    msg,
-    backgroundColor: Colors.red,
-    colorText: Colors.white,
-    snackPosition: SnackPosition.BOTTOM,
-  );
 }

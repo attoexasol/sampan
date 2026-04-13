@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sampan/data/service/network_caller.dart';
 import 'package:sampan/data/service/local_store.dart';
+import 'package:sampan/data/service/safe_snackbar.dart';
 import 'package:sampan/data/service/utils.dart'; // Urls, ApiConfig
 import 'package:sampan/routes/app_routes.dart';
 import 'package:sampan/controller/profile_controller.dart';
+import 'package:sampan/screens/home_screen.dart';
+import 'package:sampan/services/auth/google_auth_service.dart';
 
 class LoginController extends GetxController {
   final formKey = GlobalKey<FormState>();
@@ -16,11 +19,34 @@ class LoginController extends GetxController {
   void togglePasswordVisibility() =>
       obscurePassword.value = !obscurePassword.value;
 
+  /// Google Sign-In via Firebase Auth. CleanCloud session is applied after backend links the account.
+  Future<void> loginWithGoogle() async {
+    if (isLoading.value) return;
+    isLoading.value = true;
+    try {
+      final result = await GoogleAuthService.instance.signInWithGoogle();
+      if (!result.success && result.message.isEmpty) return; // user cancelled
+      if (!result.success) {
+        SafeSnackbar.show('Google Sign-In', result.message, isError: true);
+        return;
+      }
+
+      // TODO(backend): Send Firebase ID token ([result.idToken]) to your API.
+      // TODO(backend): Backend verifies token and links or creates CleanCloud customer; then persist session like [login()].
+
+      SafeSnackbar.show('Google', result.message, isError: false);
+      Get.offAll(() => const HomeScreen());
+    } catch (e) {
+      SafeSnackbar.show('Error', e.toString(), isError: true);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   /// 🚀 LOGIN FUNCTION
   Future<void> login() async {
     if (formKey.currentState == null || !formKey.currentState!.validate()) {
-      Get.snackbar('Error', 'Please enter valid credentials',
-          backgroundColor: Colors.red, colorText: Colors.white);
+      SafeSnackbar.show('Error', 'Please enter valid credentials', isError: true);
       return;
     }
 
@@ -42,8 +68,9 @@ class LoginController extends GetxController {
       final body = response.body ?? {};
 
       if (response.isSuccess && body['Success'] == 'True') {
-        // Login returns "cid": "3492"; fallback to "CustomerID" if present
+        // Login returns cid; fallback to CustomerID. Same identity as signup's CustomerID.
         final customerId = (body['cid'] ?? body['CustomerID'])?.toString().trim() ?? '';
+        debugPrint('[CustomerSession] login returned cid: $customerId');
 
         // Name: 1) from API, 2) from storage, 3) derive from email
         String nameToSave = 'User Name';
@@ -93,26 +120,19 @@ class LoginController extends GetxController {
           address: addressToSave,
         );
 
-        Get.snackbar(
-          'Success',
-          'Logged in successfully',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        debugPrint('[Login] Logged in successfully');
+        SafeSnackbar.show('Success', 'Logged in successfully', isError: false);
 
         Get.offAllNamed(Routes.HOME);
       } else {
-        Get.snackbar(
+        SafeSnackbar.show(
           'Login Failed',
-          body['Error'] ?? response.errorMessage ?? 'Invalid credentials.',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
+          body['Error']?.toString() ?? response.errorMessage ?? 'Invalid credentials.',
+          isError: true,
         );
       }
     } catch (e) {
-      Get.snackbar('Error', e.toString(),
-          backgroundColor: Colors.red, colorText: Colors.white);
+      SafeSnackbar.show('Error', e.toString(), isError: true);
     } finally {
       isLoading.value = false;
     }

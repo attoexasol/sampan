@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../data/service/local_store.dart';
 import '../../data/service/network_caller.dart';
 import '../../data/service/customer_session_helper.dart';
+import '../../data/service/safe_snackbar.dart';
 import '../../data/service/utils.dart';
 import '../constants/colors.dart';
 import '../controller/profile_controller.dart';
@@ -16,6 +17,8 @@ class DeliveryAddressDialog extends StatefulWidget {
 
 class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
   final _formKey = GlobalKey<FormState>();
+
+  static const TextStyle _hintStyle = TextStyle(color: Colors.grey);
 
   // Controllers
   final TextEditingController _streetController = TextEditingController();
@@ -176,14 +179,25 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
         await Get.find<ProfileController>().refreshProfile();
       }
 
-      Get.snackbar(
-        'Success',
-        'Delivery address saved successfully!',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-
-      Get.back();
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      Navigator.of(context).pop();
+      if (messenger != null) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Delivery address saved successfully!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } else {
+        SafeSnackbar.show(
+          'Success',
+          'Delivery address saved successfully!',
+          isError: false,
+        );
+      }
     } else {
       final errorMsg = response.body?['Error'] ??
           response.errorMessage ??
@@ -265,6 +279,7 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
                           decoration: InputDecoration(
                             labelText: 'Street Address',
                             hintText: '123 Main Street',
+                            hintStyle: _hintStyle,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: AppColors.border),
@@ -292,6 +307,7 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
                           decoration: InputDecoration(
                             labelText: 'Unit / Apt (Optional)',
                             hintText: 'Apt 4B',
+                            hintStyle: _hintStyle,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: AppColors.border),
@@ -317,6 +333,7 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
                           decoration: InputDecoration(
                             labelText: 'City',
                             hintText: 'Vancouver',
+                            hintStyle: _hintStyle,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: AppColors.border),
@@ -344,6 +361,7 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
                           decoration: InputDecoration(
                             labelText: 'Postal Code',
                             hintText: 'V5N 4P5',
+                            hintStyle: _hintStyle,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: AppColors.border),
@@ -372,6 +390,7 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
                           decoration: InputDecoration(
                             labelText: 'Delivery Instructions (Optional)',
                             hintText: 'e.g., Leave at front door, ring doorbell',
+                            hintStyle: _hintStyle,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: AppColors.border),

@@ -53,12 +53,14 @@ class LoginView extends GetView<LoginController> {
                         ),
                         SizedBox(height: AppSizes.xl),
 
-                        Material(
+                        Obx(() => Material(
                           color: Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
-                            onTap: () {},
+                            onTap: controller.isLoading.value
+                                ? null
+                                : controller.loginWithGoogle,
                             splashColor: Colors.black.withOpacity(0.08),
                             highlightColor: Colors.black.withOpacity(0.06),
                             child: AnimatedContainer(
@@ -82,7 +84,7 @@ class LoginView extends GetView<LoginController> {
                               ),
                             ),
                           ),
-                        ),
+                        )),
                         SizedBox(height: AppSizes.md),
                         Material(
                           color: Colors.transparent,

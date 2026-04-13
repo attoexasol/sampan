@@ -14,19 +14,20 @@ class Urls {
   static const String baseUrl = "https://cleancloudapp.com/api";
   static const String _baseUrl = baseUrl;
 
-  // Auth — save CustomerID/cid from responses; used across the app for APIs
-   static const String accountCreate = "$_baseUrl/addCustomer";   // Response: "CustomerID": 3492
-   static const String logInAcc = "$_baseUrl/loginCustomer";      // Response: "cid": "3492"
+  // Auth — save CustomerID (signup) or cid (login) from responses; same identity, single storage key
+   static const String accountCreate = "$_baseUrl/addCustomer";   // Response: CustomerID
+   static const String logInAcc = "$_baseUrl/loginCustomer";      // Response: cid
    static const String PreferencesMsg = "$_baseUrl/addMessage";                                                   //
   static const String deleteCustomer = "$_baseUrl/deleteCustomer";
   static const String updateCustomerAddress = "$_baseUrl/updateCustomer";
   static const String getOrders_History = "$_baseUrl/getOrders";
+  static const String ResetPassword = "$_baseUrl/passwordCustomer";
 
   // Services
    static const String deliverLocation = "$_baseUrl/getRoute";
    static const String PickupDeliveryDates  = "$_baseUrl/getDates";
    static const String PickupDeliveryTimes = "$_baseUrl/getSlots";
-   static const String gift = "$_baseUrl/getReferral";
+   static const String referral_earned_amount = "$_baseUrl/getReferral";
    static const String itemsOfLaundry = "$_baseUrl/getProducts";
 
 
@@ -67,4 +68,11 @@ class Urls {
 // 6. Send a Gift Card             https://cleancloudapp.com/api/getReferral
 
 
+}
+
+/// Backend endpoints for referral validation and reward (your backend; change base if different).
+class AuthEndpoints {
+  static const String backendBaseUrl = 'https://cleancloudapp.com/api';
+  static String get validateReferralCode => '$backendBaseUrl/validate-referral-code';
+  static String get applyReferral => '$backendBaseUrl/referral/apply';
 }

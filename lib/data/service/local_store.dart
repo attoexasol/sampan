@@ -120,8 +120,13 @@ class LocalStore {
   /// Single source for "is this session valid for API calls?"
   Future<String?> getValidCustomerId() async {
     final raw = await getCustomerId();
-    if (!isValidCustomerId(raw)) return null;
-    return raw!.trim();
+    if (!isValidCustomerId(raw)) {
+      debugPrint('[CustomerSession] missing/invalid customer id');
+      return null;
+    }
+    final value = raw!.trim();
+    debugPrint('[CustomerSession] fetched stored customer id: $value');
+    return value;
   }
 
   /// Clear only customer ID (e.g. for testing). Logout uses clearSession() which clears all session keys.
@@ -270,11 +275,10 @@ class LocalStore {
 
     if (_isValidCustomerId(cid)) {
       await saveCustomerId(cid!);
-      debugPrint('✅ Customer ID saved successfully: $cid');
+      debugPrint('[CustomerSession] normalized and saved customer id: $cid');
     } else {
-      debugPrint('⚠️ Customer ID not found or invalid in response (null/empty/"null")');
-      debugPrint('⚠️ Available keys: ${json.keys.toList()}');
-      debugPrint('⚠️ Extracted cid: $cid');
+      debugPrint('[CustomerSession] missing/invalid customer id');
+      debugPrint('⚠️ saveCustomerIdFromResponse: Available keys: ${json.keys.toList()}, extracted: $cid');
     }
   }
   

@@ -149,8 +149,13 @@ class ProfileController extends GetxController {
     }
   }
 
-  /// ✅ Save updated info locally and refresh reactive values
-  Future<void> updateProfile(String newName, String newEmail, String newPhone) async {
+  /// ✅ Save updated info locally and refresh reactive values. Returns false on failure.
+  Future<bool> updateProfile(
+    String newName,
+    String newEmail,
+    String newPhone, {
+    bool showFeedback = true,
+  }) async {
     try {
       final existing = await LocalStore.instance.getUserProfile();
       final updated = UserProfile(
@@ -165,21 +170,27 @@ class ProfileController extends GetxController {
       await LocalStore.instance.saveSession(name: newName, email: newEmail);
       await refreshProfile();
 
-      Get.snackbar(
-        'Profile Updated ✅',
-        'Your profile information has been updated.',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (showFeedback) {
+        Get.snackbar(
+          'Profile Updated ✅',
+          'Your profile information has been updated.',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+      return true;
     } catch (e) {
       debugPrint("⚠️ Error updating profile: $e");
-      Get.snackbar(
-        'Error',
-        'Failed to update profile.',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      if (showFeedback) {
+        Get.snackbar(
+          'Error',
+          'Failed to update profile.',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+      return false;
     }
   }
 

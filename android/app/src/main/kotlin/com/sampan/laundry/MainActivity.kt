@@ -1,4 +1,4 @@
-package com.example.sampan
+package com.sampan.laundry
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

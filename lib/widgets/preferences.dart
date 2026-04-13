@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import '../../data/service/local_store.dart';
 import '../../data/service/customer_session_helper.dart';
 import '../../data/service/network_caller.dart';
+import '../../data/service/safe_snackbar.dart';
 
 class PreferencesScreen extends StatefulWidget {
   const PreferencesScreen({super.key});
@@ -54,32 +54,25 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
 
       if (response.isSuccess && (response.body?['Success'] == 'True')) {
         _notesController.clear();
-        Get.snackbar(
-          '✅ Success',
-          'Your message was saved successfully!',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
-
         await LocalStore.instance.saveApiResponse(response.body ?? {});
+        if (!mounted) return;
+        SafeSnackbar.show(
+          'Success',
+          'Your message was saved successfully!',
+          isError: false,
+        );
       } else {
-        Get.snackbar(
-          '❌ Failed',
+        SafeSnackbar.show(
+          'Failed',
           response.body?['Error'] ??
               response.errorMessage ??
               'Unable to save note.',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
+          isError: true,
         );
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      Get.snackbar(
-        'Error',
-        e.toString(),
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      SafeSnackbar.show('Error', e.toString(), isError: true);
     }
   }
 

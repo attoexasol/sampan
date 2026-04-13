@@ -258,7 +258,11 @@ class EnvironmentalImpactCard extends StatelessWidget {
       confirmTextColor: Colors.white,
       buttonColor: AppColors.primary,
       onConfirm: () {
-        controller.updateProfile(nameCtrl.text.trim(), emailCtrl.text.trim());
+        controller.updateProfile(
+          nameCtrl.text.trim(),
+          emailCtrl.text.trim(),
+          controller.phone.value.trim(),
+        );
         Get.back();
         Get.snackbar(
           'Success',

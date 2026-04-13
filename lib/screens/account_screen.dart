@@ -951,15 +951,39 @@ class _AccountScreenState extends State<AccountScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => _ProfileEditDialog(
+      builder: (dialogContext) => _ProfileEditDialog(
         nameController: nameCtrl,
         emailController: emailCtrl,
         phoneController: phoneCtrl,
         onSave: (name, email, phone) async {
-          await controller.updateProfile(name, email, phone);
-          if (context.mounted) {
-            Navigator.pop(context);
+          final ok = await controller.updateProfile(
+            name,
+            email,
+            phone,
+            showFeedback: false,
+          );
+          if (!context.mounted) return;
+          final messenger = ScaffoldMessenger.maybeOf(context);
+          if (!ok) {
+            messenger?.showSnackBar(
+              const SnackBar(
+                content: Text('Failed to update profile.'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 3),
+              ),
+            );
+            return;
           }
+          if (dialogContext.mounted) Navigator.pop(dialogContext);
+          messenger?.showSnackBar(
+            const SnackBar(
+              content: Text('Your profile information has been updated.'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 3),
+            ),
+          );
         },
       ),
     );
@@ -1130,13 +1154,17 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Email Address
+                      // Email Address (read-only — account email cannot be changed here)
                       TextFormField(
                         controller: widget.emailController,
+                        readOnly: true,
+                        enableInteractiveSelection: true,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
                           labelText: 'Email Address',
                           hintText: 'sarathmantravadi@gmail.com',
+                          filled: true,
+                          fillColor: AppColors.border.withValues(alpha: 0.15),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: AppColors.border),
@@ -1148,9 +1176,13 @@ class _ProfileEditDialogState extends State<_ProfileEditDialog> {
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(
-                              color: AppColors.primary,
-                              width: 2,
+                              color: AppColors.border,
+                              width: 1,
                             ),
+                          ),
+                          disabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: AppColors.border),
                           ),
                         ),
                       ),

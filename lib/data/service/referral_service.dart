@@ -9,7 +9,7 @@ class ReferralService {
     if (customerId.trim().isEmpty) return null;
 
     final response = await NetworkCaller.postRequest(
-      url: Urls.gift,
+      url: Urls.referral_earned_amount,
       body: {
         'api_token': ApiConfig.apiToken,
         'customerID': customerId.trim(),

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "972205906276",
+    "project_id": "sampan-app-ebba8",
+    "storage_bucket": "sampan-app-ebba8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:972205906276:android:b165eb2935c880fa8e8271",
+        "android_client_info": {
+          "package_name": "com.sampan.laundry"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "972205906276-g7hi27freo43qim9gbkkohpm5quqj8v8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sampan.laundry",
+            "certificate_hash": "da81e1c66a3436218f8892caa30443fa0f98cf7c"
+          }
+        },
+        {
+          "client_id": "972205906276-au69fl085aaj00j64rqag880ddpdmcni.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApT7SUYexV9mGnhAKwv58v5JJM0nlxqAg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "972205906276-au69fl085aaj00j64rqag880ddpdmcni.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
