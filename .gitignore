@@ -1,45 +1,129 @@
-# Miscellaneous
-*.class
+# ------------------------------------------------------------------------------
+# Flutter / Dart — build outputs, tool cache, pub
+# ------------------------------------------------------------------------------
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.dart_tool/build/
+coverage/
+*.lcov
 *.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+*.tmp
+*.dart.js
+*.js.map
+*.info.json
 
-# IntelliJ related
+# Flutter generated
+.flutter-plugins
+.flutter-plugins-dependencies
+**/generated_plugin_registrant.dart
+
+# Symbolication / obfuscation artifacts
+app.*.symbols
+app.*.map.json
+
+# ------------------------------------------------------------------------------
+# pubspec.lock
+# Keep this for Flutter APPLICATION (do NOT ignore)
+# Ignore only if this is a package/library
+# pubspec.lock
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# Android
+# ------------------------------------------------------------------------------
+android/.gradle/
+android/app/build/
+android/local.properties
+android/**/GeneratedPluginRegistrant.java
+android/.cxx/
+*.jks
+*.keystore
+key.properties
+*.hprof
+
+# ------------------------------------------------------------------------------
+# iOS / Xcode / CocoaPods
+# ------------------------------------------------------------------------------
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Generated.xcconfig
+ios/Runner/GeneratedPluginRegistrant.*
+ios/**/*.mode1v3
+ios/**/*.mode2v3
+ios/**/*.moved-aside
+ios/**/*.pbxuser
+ios/**/*.perspectivev3
+ios/**/DerivedData/
+ios/**/xcuserdata/
+
+# ------------------------------------------------------------------------------
+# macOS
+# ------------------------------------------------------------------------------
+macos/Flutter/ephemeral/
+macos/Pods/
+macos/**/xcuserdata/
+macos/**/.symlinks/
+
+# ------------------------------------------------------------------------------
+# Windows
+# ------------------------------------------------------------------------------
+windows/flutter/ephemeral/
+
+# ------------------------------------------------------------------------------
+# Linux
+# ------------------------------------------------------------------------------
+linux/flutter/ephemeral/
+
+# ------------------------------------------------------------------------------
+# Web
+# ------------------------------------------------------------------------------
+build/web/
+
+# ------------------------------------------------------------------------------
+# Firebase / Secrets (IMPORTANT)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+google-services.json
+GoogleService-Info.plist
+
+# ------------------------------------------------------------------------------
+# Generated Dart files (optional but recommended)
+# ------------------------------------------------------------------------------
+*.g.dart
+*.freezed.dart
+
+# ------------------------------------------------------------------------------
+# IDEs — VS Code, IntelliJ / Android Studio
+# ------------------------------------------------------------------------------
+.vscode/
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
+*.code-workspace
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# ------------------------------------------------------------------------------
+# OS & editor junk
+# ------------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+*.swp
+*.swo
+*~
+.history
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-/coverage/
-
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# ------------------------------------------------------------------------------
+# Misc
+# ------------------------------------------------------------------------------
+*.lock
