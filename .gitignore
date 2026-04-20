@@ -93,6 +93,8 @@ build/web/
 !.env.example
 **/google-services.json
 **/GoogleService-Info.plist
+# Project ships iOS Firebase config for local builds; override global ignore.
+!ios/Runner/GoogleService-Info.plist
 
 # ------------------------------------------------------------------------------
 # Generated Dart files (optional but recommended)

@@ -44,6 +44,9 @@ class Urls {
    static const String addSubscription = "$baseUrl/addSubscription";
    static const String getSubscriptions = "$baseUrl/getSubscription";
 
+
+  /// App backend: POST JSON `{"token":"<Firebase ID token>"}` (see `FirebaseLoginApi`).
+  static const String sendGoogleToken = "https://clean-cloud.attoexasolutions.com/auth/firebase-login";
 // 1. Premium Bag Service
 // 2. Subscriptions
 // 3. Want it sooner?

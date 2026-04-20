@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,14 +7,20 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
 import 'controller/products_controller.dart';
 import 'controller/profile_controller.dart';
+import 'firebase_options.dart';
 import 'modules/schedule/schedule_view.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  if (kDebugMode) {
+    debugPrint('[Firebase] Default app initialized: ${Firebase.apps.map((a) => a.name).join(", ")}');
+  }
 
   // Initialize Stripe
   // Stripe.publishableKey = "pk_live_51QswX3FSsSDfUKXIQTZK5gnaXKza6kJqL8uN6b1S5Q4QvWD6CioWBFNdBGskXbB5jEO2p52o2Rvfryotbah29rGT00ycgSwYPf";

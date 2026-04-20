@@ -1,5 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sampan/services/auth/firebase_id_token.dart';
+import 'package:sampan/services/auth/google_auth_log.dart';
 
 /// Outcome of [GoogleAuthService.signInWithGoogle].
 class GoogleAuthResult {
@@ -14,6 +18,7 @@ class GoogleAuthResult {
 
   final bool success;
   final String message;
+  /// Firebase Auth **ID token** (JWT) after Google sign-in — not the Google OAuth `accessToken`.
   final String? idToken;
   final String? uid;
   final String? email;
@@ -53,45 +58,82 @@ class GoogleAuthService {
   bool _googleSignInInitialized = false;
 
   Future<void> _ensureGoogleSignInReady() async {
-    if (_googleSignInInitialized) return;
+    if (_googleSignInInitialized) {
+      debugPrint('[GOOGLE_AUTH] GoogleSignIn initialize (already done, skipped)');
+      return;
+    }
+    debugPrint('[GOOGLE_AUTH] GoogleSignIn initialize');
     // If Android returns no Google idToken, pass serverClientId (Web client ID from Firebase).
     await GoogleSignIn.instance.initialize();
     _googleSignInInitialized = true;
+    debugPrint('[GOOGLE_AUTH] GoogleSignIn initialize complete');
   }
 
   Future<GoogleAuthResult> signInWithGoogle() async {
     try {
+      debugPrint('[GOOGLE_AUTH] Starting authentication');
       await _ensureGoogleSignInReady();
 
+      debugPrint('[GOOGLE_AUTH] authenticate start');
       final GoogleSignInAccount googleUser =
           await GoogleSignIn.instance.authenticate();
 
+      final emailLabel =
+          googleUser.email.isEmpty ? '(none)' : googleUser.email;
+      debugPrint('[GOOGLE_AUTH] Account selected: $emailLabel');
+
+      debugPrint('[GOOGLE_AUTH] authentication tokens received');
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final String? googleIdToken = googleAuth.idToken;
       if (googleIdToken == null || googleIdToken.isEmpty) {
+        debugPrint('[GOOGLE_AUTH] NO_ID_TOKEN');
+        debugPrint('[GOOGLE_AUTH] full exception: Google idToken was null or empty');
         return GoogleAuthResult.failure(
           'Missing Google ID token. Add a Web OAuth client in Firebase if needed, '
           'update google-services.json, or use initialize(serverClientId: ...).',
         );
       }
+      logGoogleAuthJwtSnapshot('Google ID Token (for Firebase credential)', googleIdToken);
 
+      debugPrint('[GOOGLE_AUTH] Firebase credential created');
       final OAuthCredential credential = GoogleAuthProvider.credential(
         idToken: googleIdToken,
       );
 
+      debugPrint('[GOOGLE_AUTH] FirebaseAuth.signInWithCredential start');
       final UserCredential userCredential =
           await _firebaseAuth.signInWithCredential(credential);
       final User? user = userCredential.user;
 
       if (user == null) {
+        debugPrint('[GOOGLE_AUTH] Firebase login failure: user is null');
+        debugPrint(
+          '[GOOGLE_AUTH] full exception: FirebaseAuth signIn returned null user',
+        );
         return GoogleAuthResult.failure(
           'Sign-in completed but no Firebase user was returned.',
         );
       }
 
-      final String? firebaseIdToken = await user.getIdToken();
-      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
-        return GoogleAuthResult.failure('Could not obtain Firebase ID token.');
+      debugPrint(
+        '[GOOGLE_AUTH] Email: ${user.email ?? "(none)"}',
+      );
+      debugPrint('[GOOGLE_AUTH] Firebase login success UID: ${user.uid}');
+
+      // Backend must receive Firebase Auth **ID token** (force refresh), not Google OAuth access_token.
+      final String firebaseIdToken;
+      try {
+        firebaseIdToken = await getFirebaseIdToken(forceRefresh: true);
+        validateFirebaseIdTokenForBackend(firebaseIdToken);
+      } on FirebaseIdTokenException catch (e) {
+        debugPrint('[GOOGLE_AUTH] NO_ID_TOKEN (Firebase) ${e.message}');
+        return GoogleAuthResult.failure(e.message);
+      }
+      if (kDebugMode) {
+        logGoogleAuthJwtSnapshot(
+          'Firebase ID Token (Firebase Auth, for backend)',
+          firebaseIdToken,
+        );
       }
 
       return GoogleAuthResult.ok(
@@ -100,20 +142,47 @@ class GoogleAuthService {
         email: user.email,
         displayName: user.displayName,
       );
-    } on GoogleSignInException catch (e) {
+    } on GoogleSignInException catch (e, st) {
       if (e.code == GoogleSignInExceptionCode.canceled ||
           e.code == GoogleSignInExceptionCode.interrupted ||
           e.code == GoogleSignInExceptionCode.uiUnavailable) {
+        debugPrint('[GOOGLE_AUTH] USER_CANCELLED');
+        debugPrint('[GOOGLE_AUTH] full exception: $e');
         return GoogleAuthResult.cancelled();
       }
+      debugPrint('[GOOGLE_AUTH] GoogleSignInException: $e');
+      debugPrint('[GOOGLE_AUTH] full exception: $e');
+      debugPrint('[GOOGLE_AUTH] stack trace:\n$st');
       return GoogleAuthResult.failure(
         e.description?.isNotEmpty == true ? e.description! : e.code.name,
       );
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, st) {
+      debugPrint('[GOOGLE_AUTH] Firebase login failure');
+      debugPrint('[GOOGLE_AUTH] FirebaseAuthException code=${e.code} message=${e.message}');
+      debugPrint('[GOOGLE_AUTH] full exception: $e');
+      debugPrint('[GOOGLE_AUTH] stack trace:\n$st');
       return GoogleAuthResult.failure(
         e.message?.isNotEmpty == true ? e.message! : e.code,
       );
-    } catch (e) {
+    } on PlatformException catch (e, st) {
+      debugPrint('[GOOGLE_AUTH] PlatformException code=${e.code} message=${e.message} details=${e.details}');
+      debugPrint('[GOOGLE_AUTH] full exception: $e');
+      debugPrint('[GOOGLE_AUTH] stack trace:\n$st');
+      return GoogleAuthResult.failure(e.message ?? e.code);
+    } catch (e, st) {
+      debugPrint('[GOOGLE_AUTH] Exception: $e');
+      debugPrint('[GOOGLE_AUTH] full exception: $e');
+      debugPrint('[GOOGLE_AUTH] stack trace:\n$st');
+      if (e is FirebaseAuthException) {
+        debugPrint(
+          '[GOOGLE_AUTH] FirebaseAuthException code=${e.code} message=${e.message}',
+        );
+      }
+      if (e is PlatformException) {
+        debugPrint(
+          '[GOOGLE_AUTH] PlatformException code=${e.code} message=${e.message} details=${e.details}',
+        );
+      }
       return GoogleAuthResult.failure(e.toString());
     }
   }

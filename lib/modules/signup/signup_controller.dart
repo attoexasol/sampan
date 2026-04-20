@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:sampan/data/service/network_caller.dart';
 import 'package:sampan/data/service/local_store.dart';
@@ -8,6 +10,7 @@ import 'package:sampan/data/service/utils.dart';
 import 'package:sampan/routes/app_routes.dart';
 import 'package:sampan/controller/profile_controller.dart';
 import 'package:sampan/screens/home_screen.dart';
+import 'package:sampan/services/auth/firebase_login_api.dart';
 import 'package:sampan/services/auth/google_auth_service.dart';
 import '../login/login_binding.dart';
 import '../login/login_view.dart';
@@ -35,22 +38,76 @@ class SignupController extends GetxController {
 
   /// Same Firebase Google flow as [LoginController.loginWithGoogle]; used from signup screen.
   Future<void> signupWithGoogle() async {
-    if (isLoading.value) return;
+    if (isLoading.value) {
+      debugPrint(
+        '[GOOGLE_AUTH] Early return: signupWithGoogle() ignored (already loading)',
+      );
+      return;
+    }
+    debugPrint('[GOOGLE_AUTH] signupWithGoogle() started');
     isLoading.value = true;
     try {
       final result = await GoogleAuthService.instance.signInWithGoogle();
-      if (!result.success && result.message.isEmpty) return;
+      if (!result.success && result.message.isEmpty) {
+        debugPrint('[GOOGLE_AUTH] USER_CANCELLED');
+        return;
+      }
       if (!result.success) {
+        debugPrint(
+          '[GOOGLE_AUTH] Early return: signupWithGoogle() failed — ${result.message}',
+        );
         _err(result.message);
         return;
       }
 
-      // TODO(backend): Send Firebase ID token ([result.idToken]) to your API.
-      // TODO(backend): Backend verifies token and links or creates CleanCloud customer; then persist session like [signup()].
+      final idToken = result.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        _err('Missing Firebase ID token.');
+        return;
+      }
 
-      SafeSnackbar.show('Google', result.message, isError: false);
+      final apiResponse = await FirebaseLoginApi.sendFirebaseToken(idToken);
+      final apiBody = apiResponse.body ?? <String, dynamic>{};
+      if (!apiResponse.isSuccess) {
+        _err(apiResponse.errorMessage ?? 'Backend login failed.');
+        return;
+      }
+
+      final persistError = await FirebaseLoginApi.persistGoogleBackendSession(
+        apiBody,
+        firebaseEmail: result.email ?? '',
+        firebaseDisplayName: result.displayName,
+      );
+      if (persistError != null) {
+        _err(persistError);
+        return;
+      }
+
       Get.offAll(() => const HomeScreen());
-    } catch (e) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        debugPrint(
+          '[GOOGLE_AUTH] Google sign in successful, showing snackbar',
+        );
+        SafeSnackbar.show(
+          'Success',
+          'Google Sign-In Successful',
+          isError: false,
+        );
+      });
+    } catch (e, st) {
+      debugPrint('[GOOGLE_AUTH] signupWithGoogle() unexpected exception: $e');
+      debugPrint('[GOOGLE_AUTH] full exception: $e');
+      debugPrint('[GOOGLE_AUTH] stack trace:\n$st');
+      if (e is FirebaseAuthException) {
+        debugPrint(
+          '[GOOGLE_AUTH] FirebaseAuthException code=${e.code} message=${e.message}',
+        );
+      }
+      if (e is PlatformException) {
+        debugPrint(
+          '[GOOGLE_AUTH] PlatformException code=${e.code} message=${e.message} details=${e.details}',
+        );
+      }
       _err(e.toString());
     } finally {
       isLoading.value = false;

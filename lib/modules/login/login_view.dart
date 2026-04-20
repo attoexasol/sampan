@@ -60,7 +60,10 @@ class LoginView extends GetView<LoginController> {
                             borderRadius: BorderRadius.circular(12),
                             onTap: controller.isLoading.value
                                 ? null
-                                : controller.loginWithGoogle,
+                                : () {
+                                    debugPrint('[GOOGLE_AUTH] Button clicked');
+                                    controller.loginWithGoogle();
+                                  },
                             splashColor: Colors.black.withOpacity(0.08),
                             highlightColor: Colors.black.withOpacity(0.06),
                             child: AnimatedContainer(

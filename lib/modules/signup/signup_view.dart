@@ -49,7 +49,10 @@ class SignupView extends GetView<SignupController> {
                       borderRadius: BorderRadius.circular(12),
                       onTap: controller.isLoading.value
                           ? null
-                          : controller.signupWithGoogle,
+                          : () {
+                              debugPrint('[GOOGLE_AUTH] Button clicked');
+                              controller.signupWithGoogle();
+                            },
                       splashColor: Colors.black.withOpacity(0.08),
                       highlightColor: Colors.black.withOpacity(0.06),
                       child: AnimatedContainer(
