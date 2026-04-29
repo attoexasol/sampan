@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sampan/data/service/local_store.dart';
+import 'package:sampan/data/service/network_caller.dart';
+import 'package:sampan/data/service/utils.dart';
 import 'package:sampan/data/models/user_profile.dart';
 import 'package:sampan/routes/app_routes.dart';
 
@@ -149,7 +151,11 @@ class ProfileController extends GetxController {
     }
   }
 
-  /// ✅ Save updated info locally and refresh reactive values. Returns false on failure.
+  /// ✅ Update Profile & Account section.
+  /// Sends only `customerName` and `customerTel` to CleanCloud
+  /// (`POST $_baseUrl/updateCustomer`). On API success, persists
+  /// name + email + phone locally and refreshes the reactive observables.
+  /// Email is stored locally only — it is NOT sent to the server.
   Future<bool> updateProfile(
     String newName,
     String newEmail,
@@ -157,6 +163,48 @@ class ProfileController extends GetxController {
     bool showFeedback = true,
   }) async {
     try {
+      final cid = await LocalStore.instance.getValidCustomerId();
+      final apiToken = await LocalStore.instance.getApiToken();
+      if (cid == null || apiToken == null || apiToken.isEmpty) {
+        if (showFeedback) {
+          Get.snackbar(
+            'Error',
+            'Session expired. Please sign in again.',
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+        }
+        return false;
+      }
+
+      final response = await NetworkCaller.postRequest(
+        url: Urls.updateCustomerAddress, // POST /updateCustomer
+        body: {
+          'api_token': apiToken,
+          'customerID': cid,
+          'customerName': newName.trim(),
+          'customerTel': newPhone.trim(),
+        },
+      );
+
+      final success = response.isSuccess &&
+          (response.body?['Success']?.toString().toLowerCase() == 'true');
+      if (!success) {
+        final errorMsg = response.body?['Error']?.toString() ??
+            response.errorMessage ??
+            'Failed to update profile.';
+        debugPrint('⚠️ updateCustomer failed: $errorMsg');
+        if (showFeedback) {
+          Get.snackbar(
+            'Error',
+            errorMsg,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+        }
+        return false;
+      }
+
       final existing = await LocalStore.instance.getUserProfile();
       final updated = UserProfile(
         fullName: newName,
@@ -167,7 +215,11 @@ class ProfileController extends GetxController {
       );
 
       await LocalStore.instance.saveUserProfile(updated);
-      await LocalStore.instance.saveSession(name: newName, email: newEmail);
+      await LocalStore.instance.saveSession(
+        name: newName,
+        email: newEmail,
+        phone: newPhone,
+      );
       await refreshProfile();
 
       if (showFeedback) {

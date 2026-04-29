@@ -51,7 +51,7 @@ class LaundryView extends StatelessWidget {
                         children: [
                           const HowItWorksCard(),
                           SizedBox(height: AppSizes.md),
-                          const PremiumBagCard(),
+                          //const PremiumBagCard(),
                           SizedBox(height: AppSizes.md),
                           const SubscriptionCard(),
                           SizedBox(height: AppSizes.md),

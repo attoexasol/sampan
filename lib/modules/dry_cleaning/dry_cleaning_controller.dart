@@ -15,6 +15,13 @@ class DryCleaningController extends GetxController {
   final specialInstructionsController = TextEditingController();
   final saveForFutureOrders = false.obs;
 
+  /// UI opt-in for rush dry cleaning (card on dry cleaning screen).
+  final isRushServiceSelected = false.obs;
+
+  void toggleRushService() {
+    isRushServiceSelected.value = !isRushServiceSelected.value;
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -116,6 +123,7 @@ class DryCleaningController extends GetxController {
   Map<String, dynamic> getOrderSummarySnapshot() {
     final snapshot = orderCtrl.snapshot();
     snapshot['specialInstructions'] = specialInstructions.value;
+    snapshot['wantsRushService'] = isRushServiceSelected.value;
     return snapshot;
   }
 }

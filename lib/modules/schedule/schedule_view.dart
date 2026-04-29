@@ -846,7 +846,14 @@ class ScheduleView extends GetView<ScheduleController> {
   }
 
   /// Show Payment Bottom Sheet
-  void _showPaymentBottomSheet(BuildContext context) {
+  Future<void> _showPaymentBottomSheet(BuildContext context) async {
+    // Require a valid customer session before opening the payment sheet.
+    // Shows snackbar "Please Login / SignUp" and redirects to SignupView when missing.
+    final cid =
+        await CustomerSessionHelper.requireCustomerIdOrRedirect('continue-to-pay');
+    if (cid == null) return;
+    if (!context.mounted) return;
+
     // Check minimum gap validation
     if (!controller.canProceedToCheckout) {
       Get.snackbar(
@@ -893,6 +900,7 @@ class ScheduleView extends GetView<ScheduleController> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _PaymentBottomSheetContent(
         grandTotal: grandTotal,
@@ -940,8 +948,17 @@ class _PaymentBottomSheetContentState extends State<_PaymentBottomSheetContent> 
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-        height: MediaQuery.of(context).size.height * 0.85,
+    // Reactively follow the on-screen keyboard so the CardField is never hidden.
+    final viewInsetsBottom = MediaQuery.of(context).viewInsets.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: viewInsetsBottom),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: screenHeight * 0.85,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
@@ -950,6 +967,7 @@ class _PaymentBottomSheetContentState extends State<_PaymentBottomSheetContent> 
           ),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Handle bar
             Container(
@@ -962,8 +980,8 @@ class _PaymentBottomSheetContentState extends State<_PaymentBottomSheetContent> 
               ),
             ),
 
-            // Content
-            Expanded(
+            // Content (keyboard handled by AnimatedPadding above)
+            Flexible(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(AppSizes.lg),
                 child: Column(
@@ -1296,6 +1314,7 @@ class _PaymentBottomSheetContentState extends State<_PaymentBottomSheetContent> 
               ),
             ),
           ],
+        ),
       ),
     );
   }

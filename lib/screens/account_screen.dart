@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:sampan/constants/colors.dart';
 import 'package:sampan/constants/sizes.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -20,6 +19,10 @@ import '../widgets/rate_experience_dialog.dart';
 import '../widgets/sustainability_promise_dialog.dart';
 import '../widgets/your_wallet.dart';
 import '../screens/order_history_screen.dart';
+import '../modules/login/login_binding.dart';
+import '../modules/login/login_view.dart';
+import '../modules/signup/signup_binding.dart';
+import '../modules/signup/signup_view.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({Key? key}) : super(key: key);
@@ -102,7 +105,26 @@ class _AccountScreenState extends State<AccountScreen> {
                     _buildOrderHistoryCard(),
 
                     const SizedBox(height: 16), // space-y-4 = 16px
-
+                    Obx(() {
+                      if (controller.isLoggedIn.value) {
+                        return const SizedBox.shrink();
+                      }
+                      return _buildAccountCard(
+                        onLogin: () {
+                          Get.to(
+                            () => const LoginView(),
+                            binding: LoginBinding(),
+                          );
+                        },
+                        onCreateAccount: () {
+                          Get.to(
+                            () => const SignupView(),
+                            binding: SignupBinding(),
+                          );
+                        },
+                      );
+                    }),
+                    const SizedBox(height: 16),
                     // Feature Cards (2x2 Grid)
                     Row(
                       children: [
@@ -126,39 +148,39 @@ class _AccountScreenState extends State<AccountScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFeatureCard(
-                          icon: Icons.account_balance_wallet_outlined,
-                          label: 'Your Wallet',
-                          onTap: () async {
-                            final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('your-wallet');
-                            if (cid == null || !mounted) return;
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const YourWalletWidget()),
-                            );
-                          },
-                        ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildFeatureCard(
-                          icon: Icons.card_giftcard,
-                          label: 'Buy Gift Card',
-                          onTap: () async {
-                            final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('gift-card');
-                            if (cid == null || !mounted) return;
-                            showDialog(
-                              context: context,
-                              builder: (_) => const GiftCardDialog(),
-                            );
-                          },
-                        ),
-                        ),
-                      ],
-                    ),
+                    // Row(
+                    //   children: [
+                    //     Expanded(
+                    //       child: _buildFeatureCard(
+                    //       icon: Icons.account_balance_wallet_outlined,
+                    //       label: 'Your Wallet',
+                    //       onTap: () async {
+                    //         final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('your-wallet');
+                    //         if (cid == null || !mounted) return;
+                    //         Navigator.push(
+                    //           context,
+                    //           MaterialPageRoute(builder: (_) => const YourWalletWidget()),
+                    //         );
+                    //       },
+                    //     ),
+                    //     ),
+                    //     const SizedBox(width: 12),
+                    //     Expanded(
+                    //       child: _buildFeatureCard(
+                    //       icon: Icons.card_giftcard,
+                    //       label: 'Buy Gift Card',
+                    //       onTap: () async {
+                    //         final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('gift-card');
+                    //         if (cid == null || !mounted) return;
+                    //         showDialog(
+                    //           context: context,
+                    //           builder: (_) => const GiftCardDialog(),
+                    //         );
+                    //       },
+                    //     ),
+                    //     ),
+                    //   ],
+                    // ),
 
                     const SizedBox(height: 16), // space-y-4 = 16px
 
@@ -180,16 +202,16 @@ class _AccountScreenState extends State<AccountScreen> {
                             },
                           ),
                           _buildDivider(),
-                          _buildMenuItem(
-                            icon: Icons.credit_card_outlined,
-                            label: 'Payment Methods',
-                            onTap: () async {
-                              final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('payment-methods');
-                              if (cid == null || !mounted) return;
-                              Get.dialog(const PaymentMethodsDialog());
-                            },
-                          ),
-                          _buildDivider(),
+                          // _buildMenuItem(
+                          //   icon: Icons.credit_card_outlined,
+                          //   label: 'Payment Methods',
+                          //   onTap: () async {
+                          //     final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('payment-methods');
+                          //     if (cid == null || !mounted) return;
+                          //     Get.dialog(const PaymentMethodsDialog());
+                          //   },
+                          // ),
+                          // _buildDivider(),
                           _buildMenuItem(
                             icon: Icons.location_on_outlined,
                             label: 'Delivery Address',
@@ -438,6 +460,104 @@ class _AccountScreenState extends State<AccountScreen> {
                         ],
                       ),
                     ),
+    );
+  }
+
+  Widget _buildAccountCard({
+    required VoidCallback onLogin,
+    required VoidCallback onCreateAccount,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.person_outline, color: AppColors.primary, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Account',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Create an account or login to save your preferences and track your orders.',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.mutedForeground,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onLogin,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      'Login',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.foreground,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onCreateAccount,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Create Account',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

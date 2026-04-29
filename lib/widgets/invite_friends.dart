@@ -205,33 +205,60 @@ class _InviteFriendsDialogState extends State<_InviteFriendsDialog> {
   }
 
   Future<void> _shareViaSMS(BuildContext context, String message) async {
-    try {
-      final url = Uri.parse('sms:?body=${Uri.encodeComponent(message)}');
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url);
-        if (context.mounted) Navigator.pop(context);
-      } else {
-        if (context.mounted) _showShareFeedback(context, 'Could not open Messages');
+    final encoded = Uri.encodeComponent(message);
+    // Try `sms:` first (Android opens default messaging app); fall back to `smsto:`.
+    final candidates = <Uri>[
+      Uri.parse('sms:?body=$encoded'),
+      Uri.parse('smsto:?body=$encoded'),
+    ];
+    for (final url in candidates) {
+      try {
+        final launched =
+            await launchUrl(url, mode: LaunchMode.externalApplication);
+        if (launched) {
+          if (context.mounted) Navigator.pop(context);
+          return;
+        }
+      } catch (_) {
+        // Try the next candidate.
       }
-    } catch (e) {
-      if (context.mounted) _showShareFeedback(context, 'Share failed');
+    }
+    if (context.mounted) {
+      _showShareFeedback(context, 'No messaging app found');
     }
   }
 
   Future<void> _shareViaEmail(BuildContext context, String message) async {
+    final url = Uri(
+      scheme: 'mailto',
+      query: _encodeMailtoQuery({
+        'subject': 'Try Sampan Laundry',
+        'body': message,
+      }),
+    );
     try {
-      final url = Uri.parse(
-        'mailto:?subject=Try Sampan Laundry&body=${Uri.encodeComponent(message)}',
-      );
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url);
-        if (context.mounted) Navigator.pop(context);
-      } else {
-        if (context.mounted) _showShareFeedback(context, 'Could not open Email');
+      final launched =
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        if (context.mounted) {
+          _showShareFeedback(context, 'No email app found');
+        }
+        return;
       }
-    } catch (e) {
-      if (context.mounted) _showShareFeedback(context, 'Share failed');
+      if (context.mounted) Navigator.pop(context);
+    } catch (_) {
+      if (context.mounted) {
+        _showShareFeedback(context, 'Could not open Email');
+      }
     }
+  }
+
+  /// Build a `mailto:` query string with proper encoding of spaces (`%20`, not `+`).
+  String _encodeMailtoQuery(Map<String, String> params) {
+    return params.entries
+        .map((e) =>
+            '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .join('&');
   }
 
   void _copyReferralMessage(BuildContext context, String message) {

@@ -5,9 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../constants/colors.dart';
 import '../../../constants/sizes.dart';
-import '../../../data/service/customer_session_helper.dart';
 import '../../../data/service/utils.dart';
-import '../../../widgets/dream_big_payment_dialog.dart';
 import '../laundry_controller.dart';
 
 class SubscriptionCard extends StatelessWidget {
@@ -221,23 +219,33 @@ class SubscriptionCard extends StatelessWidget {
   }
 
   /// Dream Big plan block: Obx wraps the entire plan so button text is derived from reactive state.
+  /// Tapping "Add" simply toggles the plan as a line item in the Order Summary
+  /// (compounds with Bulky Items). Login / payment are deferred to the global
+  /// "Continue to Pay" checkout step.
   Widget _buildDreamBigPlanBlock(BuildContext context, LaundryController controller) {
     return Obx(() {
       final subState = controller.dreamBigSubscription.value;
       final processing = controller.isSubscriptionProcessing.value;
-      final isPending = subState?.isPending ?? false;
       final isActive = subState != null &&
           subState.isActive &&
           subState.activatedAt != null &&
           subState.expiresAt != null &&
           !DateTime.now().isAfter(subState.expiresAt!);
-      final buttonText = isActive ? 'Active' : isPending ? 'Inactive' : 'Add';
-      debugPrint('[DreamBig] Obx build: buttonText=$buttonText isPending=$isPending isActive=$isActive');
+      // Track summary membership reactively
+      final inSummary = controller.orderCtrl.items.containsKey('dream_big_plan');
+      final String buttonText;
+      if (isActive) {
+        buttonText = 'Active';
+      } else if (inSummary) {
+        buttonText = 'Added';
+      } else {
+        buttonText = 'Add';
+      }
       return _buildSubscriptionPlan(
         buttonText: buttonText,
         isActive: isActive,
         isLoading: processing,
-        onTap: () => _onDreamBigPlanTap(context, controller, isActive, isPending, processing),
+        onTap: () => _onDreamBigPlanTap(context, controller, isActive),
       );
     });
   }
@@ -253,14 +261,16 @@ class SubscriptionCard extends StatelessWidget {
     );
   }
 
+  /// Tap "Add" / "Added": toggle the Dream Big Plan as a line item in the
+  /// Order Summary (no login/payment required here — those are enforced at
+  /// the global "Continue to Pay" checkout step).
+  /// If the plan is already active (paid), just show an info snackbar.
   Future<void> _onDreamBigPlanTap(
     BuildContext context,
     LaundryController controller,
     bool isActive,
-    bool pending,
-    bool processing,
   ) async {
-    if (processing) return;
+    if (controller.isSubscriptionProcessing.value) return;
     if (isActive) {
       final state = controller.dreamBigSubscription.value;
       final dateStr = state?.expiresAt != null
@@ -273,62 +283,7 @@ class SubscriptionCard extends StatelessWidget {
       );
       return;
     }
-    if (pending) {
-      final customerId = await CustomerSessionHelper.requireCustomerIdOrRedirect('dream-big-payment');
-      if (customerId == null || !context.mounted) return;
-      final paid = await DreamBigPaymentDialog.show(
-        context,
-        customerId: customerId!,
-        amount: SubscriptionConfig.dreamBigPlanPrice,
-      );
-      if (!context.mounted) return;
-      debugPrint('[DreamBig] Payment dialog closed (pending branch), paid=$paid');
-      if (paid == true) {
-        await controller.onPaymentSuccess(customerId);
-      } else {
-        await controller.onPaymentFailed();
-      }
-      return;
-    }
-    // Add: validate via controller; only open payment if canContinue
-    final result = await controller.onTapDreamBigPlan();
-    if (!context.mounted) return;
-    if (result == DreamBigTapResult.needLogin) {
-      debugPrint('[DreamBig] Tap result needLogin; not opening dialog');
-      _showSnackBar(context, 'Please register or log in first.');
-      return;
-    }
-    if (result == DreamBigTapResult.alreadyActive) {
-      debugPrint('[DreamBig] Tap result alreadyActive; not opening dialog');
-      final state = controller.dreamBigSubscription.value;
-      final dateStr = state?.expiresAt != null
-          ? DateFormat.yMMMd().format(state!.expiresAt!)
-          : '—';
-      _showSnackBar(
-        context,
-        'Your Dream Big Plan is already active until $dateStr.',
-        isError: false,
-      );
-      return;
-    }
-    debugPrint('[DreamBig] Tap result canContinue; yielding then opening payment dialog');
-    await Future.delayed(Duration.zero);
-    if (!context.mounted) return;
-    final customerId = await CustomerSessionHelper.requireCustomerIdOrRedirect('dream-big-payment');
-    if (customerId == null || !context.mounted) return;
-    debugPrint('[DreamBig] Opening payment dialog (button should show Inactive)');
-    final paid = await DreamBigPaymentDialog.show(
-      context,
-      customerId: customerId!,
-      amount: SubscriptionConfig.dreamBigPlanPrice,
-    );
-    if (!context.mounted) return;
-    debugPrint('[DreamBig] Payment dialog closed, paid=$paid');
-    if (paid == true) {
-      await controller.onPaymentSuccess(customerId);
-    } else {
-      await controller.onPaymentFailed();
-    }
+    controller.toggleDreamBigPlanInSummary();
   }
 
   Widget _buildSubscriptionPlan({

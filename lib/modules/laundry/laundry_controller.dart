@@ -153,6 +153,31 @@ class LaundryController extends GetxController {
     _updateOrderSummary();
   }
 
+  /// True when the Dream Big Plan line is currently in the Order Summary.
+  bool get isDreamBigInSummary => orderCtrl.items.containsKey('dream_big_plan');
+
+  /// Toggle the Dream Big Plan as a line item in the Order Summary.
+  /// No login/payment is required here — auth + payment are enforced at the
+  /// global "Continue to Pay" checkout step. The price compounds with
+  /// Bulky Items via [OrderSummaryController.subTotal].
+  void toggleDreamBigPlanInSummary() {
+    // If user has already paid and the plan is active, do nothing here.
+    if (isDreamBigPlanActive) return;
+    if (isDreamBigInSummary) {
+      orderCtrl.items.remove('dream_big_plan');
+      isSubscriptionSelected.value = false;
+    } else {
+      orderCtrl.updateItem(
+        key: 'dream_big_plan',
+        title: SubscriptionConfig.dreamBigPlanName,
+        subtitle: '4 bags per month',
+        price: SubscriptionConfig.dreamBigPlanPrice,
+        qty: 1,
+      );
+      isSubscriptionSelected.value = true;
+    }
+  }
+
   /// Restore Dream Big state from storage (pending or active). Clear if expired.
   Future<void> restoreDreamBigPlanState() async {
     final stored = await LocalStore.instance.getDreamBigSubscription();

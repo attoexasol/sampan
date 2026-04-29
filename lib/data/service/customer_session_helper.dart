@@ -1,9 +1,10 @@
 // Centralized customer ID session handling.
 // All API flows that need customerID/cid should use getValidCustomerId() or requireCustomerIdOrRedirect().
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'local_store.dart';
+import 'safe_snackbar.dart';
 import '../../routes/app_routes.dart';
 
 class CustomerSessionHelper {
@@ -17,7 +18,7 @@ class CustomerSessionHelper {
 
   /// When an API or screen action requires a customer ID:
   /// - If a valid ID exists, returns it (trimmed string).
-  /// - If missing/null/empty/"null": shows snackbar, navigates to Sign In screen, and returns null.
+  /// - If missing/null/empty/"null": shows snackbar, navigates to Sign Up screen, and returns null.
   /// Call sites must abort the operation when null is returned.
   /// [featureName] is used for [AuthGuard] debug logs only.
   static Future<String?> requireCustomerIdOrRedirect([String? featureName]) async {
@@ -28,18 +29,14 @@ class CustomerSessionHelper {
       debugPrint('[AuthGuard] customerId found: ${cid!.trim()}');
       return cid.trim();
     }
-    debugPrint('[AuthGuard] Missing customerId. Redirecting to Sign In.');
-    if (Get.overlayContext != null) {
-      Get.snackbar(
-        '',
-        'Please log in or register..',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 3),
-      );
-    }
-    Get.offAllNamed(Routes.LOGIN);
+    debugPrint('[AuthGuard] Missing customerId. Redirecting to Sign Up.');
+    SafeSnackbar.show(
+      'Account required',
+      'Please SignUp/ Sign In',
+      isError: true,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    Get.toNamed(Routes.SIGNUP);
     return null;
   }
 }

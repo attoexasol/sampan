@@ -115,29 +115,36 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
   }
 
   Future<void> _saveAddress() async {
-    final street = _streetController.text.trim();
-    final city = _cityController.text.trim();
-    final postal = _postalController.text.trim();
-    if (street.isEmpty || city.isEmpty || postal.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Street, City, and Postal Code are required',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+    debugPrint('[DeliveryAddress] _saveAddress tapped');
+
+    // Use the Form's own validators — shows inline "Required" inside the dialog.
+    final formState = _formKey.currentState;
+    if (formState == null || !formState.validate()) {
+      debugPrint('[DeliveryAddress] Form validation failed — required fields empty');
+      SafeSnackbar.show(
+        'Missing fields',
+        'Please fill in Street, City, and Postal Code.',
+        isError: true,
       );
       return;
     }
-    if (!_formKey.currentState!.validate()) return;
+
+    final street = _streetController.text.trim();
+    final city = _cityController.text.trim();
+    final postal = _postalController.text.trim();
 
     final cid = await CustomerSessionHelper.requireCustomerIdOrRedirect('delivery-address');
-    if (cid == null) return;
+    if (cid == null) {
+      debugPrint('[DeliveryAddress] Aborting — no valid customerId');
+      return;
+    }
     final apiToken = await LocalStore.instance.getApiToken();
     if (apiToken == null || apiToken.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Customer ID not found — please login again',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+      debugPrint('[DeliveryAddress] Aborting — no apiToken in LocalStore');
+      SafeSnackbar.show(
+        'Session expired',
+        'Please sign in again.',
+        isError: true,
       );
       return;
     }
@@ -149,7 +156,9 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
     final instructions = _instructionsController.text.trim();
 
     setState(() => _isLoading = true);
+    debugPrint('[DeliveryAddress] POST /updateCustomer body=customerAddress="$customerAddress"');
 
+    // 1) POST /updateCustomer — persist concatenated customerAddress
     final response = await NetworkCaller.postRequest(
       url: Urls.updateCustomerAddress,
       body: {
@@ -159,57 +168,72 @@ class _DeliveryAddressDialogState extends State<DeliveryAddressDialog> {
       },
     );
 
-    setState(() => _isLoading = false);
-
-    if (response.isSuccess && response.body?['Success'] == 'True') {
-      await LocalStore.instance.saveSession(
-        address: customerAddress,
-        instructions: instructions,
-      );
-      await LocalStore.instance.saveAddress({
-        'street': street,
-        'unit': unit,
-        'city': city,
-        'postal': postal,
-        'instructions': instructions,
-        'fullAddress': customerAddress,
-      });
-
-      if (Get.isRegistered<ProfileController>()) {
-        await Get.find<ProfileController>().refreshProfile();
-      }
-
-      if (!mounted) return;
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      Navigator.of(context).pop();
-      if (messenger != null) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Delivery address saved successfully!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      } else {
-        SafeSnackbar.show(
-          'Success',
-          'Delivery address saved successfully!',
-          isError: false,
-        );
-      }
-    } else {
-      final errorMsg = response.body?['Error'] ??
+    final addressOk = response.isSuccess &&
+        (response.body?['Success']?.toString().toLowerCase() == 'true');
+    if (!addressOk) {
+      setState(() => _isLoading = false);
+      final errorMsg = response.body?['Error']?.toString() ??
           response.errorMessage ??
           'Address not accepted by server';
-      Get.snackbar(
-        'Failed',
-        errorMsg,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-      );
+      debugPrint('[DeliveryAddress] /updateCustomer failed: $errorMsg');
+      SafeSnackbar.show('Failed', errorMsg, isError: true);
+      return;
     }
+
+    // 2) POST /addMessage — send delivery instructions as a customer message.
+    // Soft-fail: do not block the address save if this secondary call fails.
+    bool instructionsOk = true;
+    String? instructionsError;
+    if (instructions.isNotEmpty) {
+      debugPrint('[DeliveryAddress] POST /addMessage with instructions');
+      final msgResponse = await NetworkCaller.postRequest(
+        url: Urls.PreferencesMsg,
+        body: {
+          'api_token': apiToken,
+          'customerID': cid,
+          'message': instructions,
+        },
+      );
+      instructionsOk = msgResponse.isSuccess &&
+          (msgResponse.body?['Success']?.toString().toLowerCase() == 'true');
+      if (!instructionsOk) {
+        instructionsError = msgResponse.body?['Error']?.toString() ??
+            msgResponse.errorMessage ??
+            'Could not save delivery instructions';
+        debugPrint('[DeliveryAddress] /addMessage failed: $instructionsError');
+      }
+    }
+
+    setState(() => _isLoading = false);
+
+    await LocalStore.instance.saveSession(
+      address: customerAddress,
+      instructions: instructions,
+    );
+    await LocalStore.instance.saveAddress({
+      'street': street,
+      'unit': unit,
+      'city': city,
+      'postal': postal,
+      'instructions': instructions,
+      'fullAddress': customerAddress,
+    });
+
+    if (Get.isRegistered<ProfileController>()) {
+      await Get.find<ProfileController>().refreshProfile();
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    final successMsg = instructionsOk
+        ? 'Delivery address saved successfully!'
+        : 'Address saved, but instructions could not be sent: $instructionsError';
+    SafeSnackbar.show(
+      instructionsOk ? 'Success' : 'Partial Success',
+      successMsg,
+      isError: !instructionsOk,
+    );
+    debugPrint('[DeliveryAddress] Save complete (instructionsOk=$instructionsOk)');
   }
 
   @override
