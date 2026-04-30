@@ -73,122 +73,37 @@ class SignupController extends GetxController {
         return;
       }
 
-      final status = apiBody['status']?.toString().trim().toLowerCase() ?? '';
-      if (status == 'exists') {
-        _err('This account already exists. Please try with another account or sign in.');
+      final parsed = FirebaseLoginApi.parseFirebaseLoginResponse(
+        apiBody,
+        firebaseEmailFallback: result.email,
+        firebaseDisplayNameFallback: result.displayName,
+      );
+      if (parsed == null) {
+        _err('Invalid response: missing user');
         return;
       }
-      if (status != 'created') {
+
+      // Signup screen: only allow brand-new accounts. If the backend says the
+      // Google identity already exists, route the user to sign in instead.
+      if (parsed.status == FirebaseLoginStatus.exists) {
+        _err(
+          'This account already exists. Please try with another account or sign in.',
+        );
+        return;
+      }
+      if (parsed.status != FirebaseLoginStatus.created) {
         _err('Unexpected response from server. Please try again.');
         return;
       }
 
-      final userRaw = apiBody['user'];
-      if (userRaw is! Map) {
-        _err('Invalid response: missing user');
-        return;
-      }
-      final user = Map<String, dynamic>.from(userRaw);
-      final googleName = user['name']?.toString().trim() ?? '';
-      final googleEmail = user['email']?.toString().trim() ?? '';
-      final email = googleEmail.isNotEmpty
-          ? googleEmail
-          : (result.email ?? '').trim();
-      if (email.isEmpty) {
-        _err('Invalid response: missing email');
-        return;
-      }
-      final fullName = googleName.isNotEmpty
-          ? googleName
-          : ((result.displayName ?? '').trim().isNotEmpty
-              ? result.displayName!.trim()
-              : _nameFromEmailForGoogle(email));
-      final phoneStr = user['phone']?.toString().trim() ?? '';
-      final password = user['generatedPassword']?.toString().trim() ?? '';
-      if (password.isEmpty) {
-        _err('Invalid response: missing generated password');
-        return;
-      }
-
       final referralCode = referralCodeController.text.trim();
-      final addBody = <String, dynamic>{
-        'api_token': ApiConfig.apiToken,
-        'customerName': fullName,
-        'customerTel': phoneStr,
-        'customerEmail': email,
-        'customerPassword': password,
-        'customerAddress': 'Pending address update, please edit profile',
-        'customerNotes': 'New customer registration from Sampan app (Google)',
-      };
-      if (referralCode.isNotEmpty) {
-        addBody['promoCode'] = referralCode;
-      }
-
-      final addResponse = await NetworkCaller.postRequest(
-        url: Urls.accountCreate,
-        body: addBody,
+      final bridge = await FirebaseLoginApi.bridgeToCleanCloud(
+        parsed,
+        referralCode: referralCode.isEmpty ? null : referralCode,
       );
-      final addRespBody = addResponse.body ?? {};
-      final addErrorMsg = addRespBody['Error']?.toString().trim();
-      final hasAddError = addErrorMsg != null && addErrorMsg.isNotEmpty;
-      if (hasAddError) {
-        debugPrint('[Signup] Google addCustomer API returned error: $addErrorMsg');
-        final isEmailExists =
-            addErrorMsg.toLowerCase().contains('already exists');
-        if (isEmailExists) {
-          _err(
-            'An account already exists with this email. Please sign in instead.',
-          );
-        } else {
-          _err(addErrorMsg);
-        }
+      if (!bridge.isSuccess) {
+        _err(bridge.errorMessage ?? 'Signup failed. Please try again.');
         return;
-      }
-
-      final customerId =
-          (addRespBody['CustomerID'] ?? addRespBody['cid'])?.toString().trim() ??
-              '';
-      debugPrint('[CustomerSession] Google signup addCustomer CustomerID: $customerId');
-      final addOk = addResponse.isSuccess &&
-          (addRespBody['Success'] == 'True' ||
-              addRespBody['Success'] == true ||
-              customerId.isNotEmpty);
-      if (!addOk || customerId.isEmpty) {
-        _err(addResponse.errorMessage ?? 'Signup failed. Please try again.');
-        return;
-      }
-
-      final addressLine = addBody['customerAddress'] as String;
-      await LocalStore.instance.saveSession(
-        customerId: customerId,
-        apiToken: ApiConfig.apiToken,
-        name: fullName,
-        email: email,
-        phone: phoneStr,
-        address: addressLine,
-        instructions: '',
-      );
-      await LocalStore.instance.saveCustomerIdFromResponse(addRespBody);
-      final profile = UserProfile(
-        fullName: fullName,
-        email: email,
-        phone: phoneStr,
-        address: addressLine,
-        name: fullName,
-      );
-      await LocalStore.instance.saveUserProfile(profile);
-      await LocalStore.instance.setLoggedIn(true);
-
-      if (Get.isRegistered<ProfileController>()) {
-        final session = Get.find<ProfileController>();
-        await session.setSession(
-          name: fullName,
-          email: email,
-          customerId: customerId,
-          apiToken: ApiConfig.apiToken,
-          phone: phoneStr,
-          address: addressLine,
-        );
       }
 
       Get.offAll(() => const HomeScreen());
@@ -198,7 +113,7 @@ class SignupController extends GetxController {
         );
         SafeSnackbar.show(
           'Success',
-          'Google Sign-In Successful',
+          'Account created with Google',
           isError: false,
         );
       });
@@ -360,21 +275,6 @@ class SignupController extends GetxController {
   }
 
   void navigateToLogin() => Get.to(() => const LoginView(), binding: LoginBinding());
-
-  static String _nameFromEmailForGoogle(String email) {
-    if (email.trim().isEmpty) return 'User';
-    final beforeAt = email.split('@').first.trim();
-    if (beforeAt.isEmpty) return 'User';
-    final withSpaces = beforeAt.replaceAll(RegExp(r'[._]'), ' ');
-    final words = withSpaces.split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
-    if (words.isEmpty) return 'User';
-    final capitalized = words
-        .map((w) => w.length > 1
-            ? w[0].toUpperCase() + w.substring(1).toLowerCase()
-            : w.toUpperCase())
-        .join(' ');
-    return capitalized.isNotEmpty ? capitalized : 'User';
-  }
 
   void _err(String msg) =>
       SafeSnackbar.show('Error', msg, isError: true);

@@ -67,13 +67,27 @@ class LoginController extends GetxController {
         return;
       }
 
-      final persistError = await FirebaseLoginApi.persistGoogleBackendSession(
+      final parsed = FirebaseLoginApi.parseFirebaseLoginResponse(
         apiBody,
-        firebaseEmail: result.email ?? '',
-        firebaseDisplayName: result.displayName,
+        firebaseEmailFallback: result.email,
+        firebaseDisplayNameFallback: result.displayName,
       );
-      if (persistError != null) {
-        SafeSnackbar.show('Google Sign-In', persistError, isError: true);
+      if (parsed == null) {
+        SafeSnackbar.show(
+          'Google Sign-In',
+          'Invalid response from server.',
+          isError: true,
+        );
+        return;
+      }
+
+      final bridge = await FirebaseLoginApi.bridgeToCleanCloud(parsed);
+      if (!bridge.isSuccess) {
+        SafeSnackbar.show(
+          'Google Sign-In',
+          bridge.errorMessage ?? 'Sign-in failed. Please try again.',
+          isError: true,
+        );
         return;
       }
 
@@ -84,7 +98,9 @@ class LoginController extends GetxController {
         );
         SafeSnackbar.show(
           'Success',
-          'Google Sign-In Successful',
+          bridge.isCreated
+              ? 'Account created with Google'
+              : 'Google Sign-In Successful',
           isError: false,
         );
       });
