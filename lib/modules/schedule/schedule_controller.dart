@@ -405,6 +405,25 @@ class ScheduleController extends GetxController {
     _loadSavedAddress();
   }
 
+  /// Reset all per-order state so the next visit to ScheduleView starts empty.
+  /// Address fields are intentionally preserved (still useful for the next
+  /// order and saved in LocalStore anyway). Call after a successful payment.
+  void resetForNewOrder() {
+    selectedPickupDate.value = null;
+    selectedPickupTimeSlot.value = '';
+    selectedDeliveryDate.value = null;
+    selectedDeliveryTimeSlot.value = '';
+    isExpressDelivery.value = false;
+    isRushDelivery.value = false;
+    isValidDeliveryGap.value = true;
+    deliveryDurationHours.value = null;
+    expressDeliveryMessage.value = '';
+    rushServiceType.value = RushServiceType.unknown;
+    serviceType.value = '';
+    orderSummaryData.clear();
+    isLoading.value = false;
+  }
+
   Future<void> _loadSavedAddress() async {
     final saved = await LocalStore.instance.getSavedAddress();
     if (saved != null) {

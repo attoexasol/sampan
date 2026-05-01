@@ -9,6 +9,7 @@ import '../constants/sizes.dart' ;
 import '../controller/products_controller.dart';
 import '../controller/order_summary_controller.dart';
 import '../data/service/products_service.dart';
+import '../data/service/safe_snackbar.dart';
 import '../modules/schedule/schedule_controller.dart';
 import '../modules/schedule/schedule_view.dart';
 import '../widgets/service_card.dart';
@@ -47,6 +48,27 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!Get.isRegistered<OrderSummaryController>()) {
       Get.lazyPut<OrderSummaryController>(() => OrderSummaryController());
     }
+
+    // Show post-navigation messages (e.g. payment success) routed here via
+    // Get.offAll(..., arguments: {...}). We use SafeSnackbar (backed by the
+    // global ScaffoldMessengerKey wired in main.dart) instead of Get.snackbar
+    // because Get.snackbar fails with "No Overlay widget found" right after
+    // Get.offAll — the GetX routing observer hasn't settled the overlay yet.
+    //
+    // Reading args is also deferred to the post-frame callback so
+    // ModalRoute.of(context) walks the freshly-mounted route.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final route = ModalRoute.of(context);
+      final args = route?.settings.arguments ?? Get.arguments;
+      debugPrint('[HomeScreen] post-frame args: $args');
+      if (args is Map && args['paymentSuccess'] == true) {
+        SafeSnackbar.success(
+          'Your payment has been received.',
+          title: 'Payment success',
+        );
+      }
+    });
   }
 
   @override

@@ -7,6 +7,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
 import 'controller/products_controller.dart';
 import 'controller/profile_controller.dart';
+import 'data/service/safe_snackbar.dart';
 import 'firebase_options.dart';
 import 'modules/schedule/schedule_view.dart';
 import 'theme/app_theme.dart';
@@ -50,6 +51,9 @@ class SampanApp extends StatelessWidget {
         debugShowCheckedModeBanner: false, // 👈 here too
         title: 'Sampan Laundry',
         theme: AppTheme.lightTheme,
+        // Global ScaffoldMessenger — used by SafeSnackbar so payment success /
+        // failure messages survive Get.offAll() route transitions.
+        scaffoldMessengerKey: rootScaffoldMessengerKey,
         initialRoute: '/',
         onGenerateRoute: (settings) {
           // ✅ Handle dynamic route arguments here

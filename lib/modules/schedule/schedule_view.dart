@@ -20,6 +20,8 @@ import '../../data/service/customer_session_helper.dart';
 import '../../data/service/utils.dart';
 import '../../data/service/express_delivery_service.dart';
 import '../../data/service/rush_order_service.dart';
+import '../../data/service/safe_snackbar.dart';
+import '../../screens/home_screen.dart';
 
 /// ✅ UPDATED: OrderSummaryCard now shows pickup/delivery date and time
 class ScheduleView extends GetView<ScheduleController> {
@@ -1345,6 +1347,12 @@ class _PaymentBottomSheetContentState extends State<_PaymentBottomSheetContent> 
       }
       debugPrint('✅ Payment: Using customer ID: $customerId');
 
+      // Pull user email from local session (required by backend)
+      final userEmail = (await LocalStore.instance.getUserEmail())?.trim() ?? '';
+      if (userEmail.isEmpty) {
+        throw Exception('User email not found. Please sign in again.');
+      }
+
       // Convert amount to cents (Stripe uses cents)
       final amountInCents = (widget.grandTotal * 100).toInt();
 
@@ -1353,7 +1361,8 @@ class _PaymentBottomSheetContentState extends State<_PaymentBottomSheetContent> 
         url: Urls.StripePayment,
         body: {
           'amount': amountInCents,
-          'customerID': int.tryParse(customerId) ?? 0,
+          'customerID': customerId,
+          'email': userEmail,
         },
       );
 
@@ -1383,66 +1392,72 @@ class _PaymentBottomSheetContentState extends State<_PaymentBottomSheetContent> 
       
       final status = paymentIntent.status.toString().toLowerCase();
       if (status.contains('succeeded')) {
-        // Payment successful
+        // Payment successful → clear order state, close payment sheet, go Home.
+        // Clearing must happen BEFORE Get.offAll because the controllers may
+        // be disposed or rebuilt during the route reset.
+        debugPrint('[Payment] ✅ succeeded — clearing order state and navigating to HomeScreen');
+        _clearOrderStateAfterSuccess();
+
         if (mounted) {
           Navigator.pop(context);
         }
-        Get.snackbar(
-          'Success',
-          'Payment completed successfully!',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 3),
+        Get.offAll(
+          () => const HomeScreen(),
+          arguments: {'paymentSuccess': true},
         );
-      } else if (status.contains('requiresaction') || status.contains('requires_action')) {
-        // Payment requires additional action (3D Secure, etc.)
-        if (mounted) {
-          Navigator.pop(context);
-        }
-        Get.snackbar(
-          'Pending',
-          'Payment is being processed. Please complete any additional verification.',
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 4),
-        );
-      } else if (status.contains('requirespaymentmethod') || status.contains('requires_payment_method')) {
-        // Payment failed - card was declined
-        throw Exception('Payment failed. Please try a different payment method.');
+        return;
       } else {
-        // Other status (processing, canceled, etc.)
-        throw Exception('Payment status: $status');
+        // Anything else (requires_action / requires_payment_method /
+        // processing / canceled / etc.) is treated as a failure here so the
+        // user stays on the payment sheet and can retry. We do not navigate
+        // to HomeScreen.
+        throw Exception('Payment fail');
       }
     } on StripeException catch (e) {
-      // Stripe-specific errors
-      final errorMessage = (e.error.message ?? '').isNotEmpty 
-          ? e.error.message! 
-          : 'Payment failed. Please try again.';
-      Get.snackbar(
-        'Payment Failed',
-        errorMessage,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 4),
-      );
+      // Stripe-specific errors → keep the sheet open and surface a clear
+      // "Payment fail" snackbar so the user can retry.
+      debugPrint('❌ Stripe payment failed: ${e.error.message}');
+      _showPaymentFailSnackbar();
     } catch (e) {
-      // General errors
-      Get.snackbar(
-        'Error',
-        e.toString().replaceAll('Exception: ', ''),
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 4),
-      );
+      // Any other failure (network, missing email, declined card, etc.).
+      debugPrint('❌ Payment failed: $e');
+      _showPaymentFailSnackbar();
     } finally {
       if (mounted) {
         setState(() {
           _isProcessingPayment = false;
         });
+      }
+    }
+  }
+
+  /// Show the standard "Payment fail, try again" snackbar via the global
+  /// ScaffoldMessenger (see SafeSnackbar). This bypasses Get.snackbar entirely
+  /// so the message survives the bottom-sheet overlay being mid-teardown when
+  /// an async exception (e.g. HTTP timeout) reaches the catch block.
+  void _showPaymentFailSnackbar() {
+    SafeSnackbar.error('try again', title: 'Payment fail');
+  }
+
+  /// Wipe the cart / order summary / schedule selections so the user lands on
+  /// a clean Home after a successful payment instead of seeing the previous
+  /// totals and selected dates lingering in the schedule UI.
+  void _clearOrderStateAfterSuccess() {
+    if (Get.isRegistered<OrderSummaryController>()) {
+      try {
+        Get.find<OrderSummaryController>().clearAll();
+        debugPrint('[Payment] OrderSummaryController cleared');
+      } catch (e) {
+        debugPrint('[Payment] Failed to clear OrderSummaryController: $e');
+      }
+    }
+
+    if (Get.isRegistered<ScheduleController>()) {
+      try {
+        Get.find<ScheduleController>().resetForNewOrder();
+        debugPrint('[Payment] ScheduleController reset');
+      } catch (e) {
+        debugPrint('[Payment] Failed to reset ScheduleController: $e');
       }
     }
   }

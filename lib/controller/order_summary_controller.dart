@@ -208,7 +208,14 @@ class OrderSummaryController extends GetxController {
     },
   };
 
+  /// Clears every piece of cart/order state so the summary UI
+  /// (totals, items, express/rush badges) collapses back to its empty state.
+  /// Call this after a successful checkout / payment.
   void clearAll() {
     items.clear();
+    data.clear();
+    isExpressDelivery.value = false;
+    isRushDelivery.value = false;
+    expressDurationHours.value = 0.0;
   }
 }
