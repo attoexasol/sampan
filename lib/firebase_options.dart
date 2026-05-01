@@ -1,10 +1,6 @@
-// File generated from project `android/app/google-services.json` (Android) and
-// `ios/Runner/GoogleService-Info.plist` (iOS). If iOS Firebase still fails, open
-// Firebase Console → Project settings → add/re-download the iOS app for
-// `com.sampan.laundry`, then replace `GOOGLE_APP_ID` in both this file (ios.appId)
-// and `GoogleService-Info.plist` with the value from the downloaded plist.
-//
-// Recommended: install Firebase CLI + run `flutterfire configure` to regenerate.
+// Android values from `android/app/google-services.json`. iOS values must match
+// `ios/Runner/GoogleService-Info.plist` (appId, apiKey, iosClientId). Regenerate
+// with `flutterfire configure` after Firebase console changes.
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
@@ -43,13 +39,19 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyApT7SUYexV9mGnhAKwv58v5JJM0nlxqAg',
-    appId: '1:972205906276:ios:b165eb2935c880fa8e8271',
+    apiKey: 'AIzaSyAEHCW9mi2I4J-xHRGZ5V72TzuVTEQltww',
+    appId: '1:972205906276:ios:9f0cb8a594c849228e8271',
     messagingSenderId: '972205906276',
     projectId: 'sampan-app-ebba8',
     storageBucket: 'sampan-app-ebba8.firebasestorage.app',
     iosClientId:
-        '972205906276-au69fl085aaj00j64rqag880ddpdmcni.apps.googleusercontent.com',
+        '972205906276-28oadbedhqjklrraorc79n9g09r1unh3.apps.googleusercontent.com',
     iosBundleId: 'com.sampan.laundry',
   );
+
+  /// Web OAuth client (`client_type` 3 in `android/app/google-services.json`).
+  /// Use as [GoogleSignIn.initialize] `serverClientId` so the plugin returns a
+  /// Google ID token for [GoogleAuthProvider.credential] on Android and iOS.
+  static const String googleSignInServerClientId =
+      '972205906276-au69fl085aaj00j64rqag880ddpdmcni.apps.googleusercontent.com';
 }

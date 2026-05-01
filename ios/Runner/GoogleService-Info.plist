@@ -3,11 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>972205906276-au69fl085aaj00j64rqag880ddpdmcni.apps.googleusercontent.com</string>
+	<string>972205906276-28oadbedhqjklrraorc79n9g09r1unh3.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.972205906276-au69fl085aaj00j64rqag880ddpdmcni</string>
+	<string>com.googleusercontent.apps.972205906276-28oadbedhqjklrraorc79n9g09r1unh3</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>972205906276-g7hi27freo43qim9gbkkohpm5quqj8v8.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
-	<string>AIzaSyApT7SUYexV9mGnhAKwv58v5JJM0nlxqAg</string>
+	<string>AIzaSyAEHCW9mi2I4J-xHRGZ5V72TzuVTEQltww</string>
 	<key>GCM_SENDER_ID</key>
 	<string>972205906276</string>
 	<key>PLIST_VERSION</key>
@@ -19,16 +21,16 @@
 	<key>STORAGE_BUCKET</key>
 	<string>sampan-app-ebba8.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_APPINVITE_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_GCM_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_SIGNIN_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:972205906276:ios:b165eb2935c880fa8e8271</string>
+	<string>1:972205906276:ios:9f0cb8a594c849228e8271</string>
 </dict>
 </plist>

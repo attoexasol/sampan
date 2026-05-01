@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sampan/firebase_options.dart';
 import 'package:sampan/services/auth/firebase_id_token.dart';
 import 'package:sampan/services/auth/google_auth_log.dart';
 
@@ -63,8 +64,9 @@ class GoogleAuthService {
       return;
     }
     debugPrint('[GOOGLE_AUTH] GoogleSignIn initialize');
-    // If Android returns no Google idToken, pass serverClientId (Web client ID from Firebase).
-    await GoogleSignIn.instance.initialize();
+    await GoogleSignIn.instance.initialize(
+      serverClientId: DefaultFirebaseOptions.googleSignInServerClientId,
+    );
     _googleSignInInitialized = true;
     debugPrint('[GOOGLE_AUTH] GoogleSignIn initialize complete');
   }
